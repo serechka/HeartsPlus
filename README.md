@@ -31,8 +31,10 @@ Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 
 ## 📸 Screenshot
 
-> _A screenshot of the hearts above players' heads in action._
-> _TODO: replace with a real screenshot before publishing._
+Drop screenshots into the [`screenshots/`](screenshots/) folder and reference
+them here once available:
+
+<!-- ![HeartsPlus in action](screenshots/26.2-pvp.png) -->
 
 ## 📥 Installation
 
