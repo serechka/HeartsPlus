@@ -35,8 +35,8 @@ public final class HeartsPlusConfig {
 	public boolean showAbsorption = true;
 	public boolean stackHearts = true;
 	public boolean hideWhenInvisible = true;
-	public boolean hideWhenSneaking = false;
-	public boolean useVanillaTextures = false;
+	public boolean hideWhenSneaking = true;
+	public boolean useVanillaTextures = true;
 	public int heartOffset = 0;
 	public double scale = 1.0;
 	public double renderDistance = 64.0;

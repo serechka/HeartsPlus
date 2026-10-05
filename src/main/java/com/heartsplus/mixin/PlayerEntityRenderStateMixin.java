@@ -12,6 +12,9 @@ import org.spongepowered.asm.mixin.Unique;
 @Mixin(PlayerEntityRenderState.class)
 public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 	@Unique
+	private static final int heartsplus$BLINK_TICKS = 15;
+
+	@Unique
 	private float heartsplus$health;
 	@Unique
 	private float heartsplus$maxHealth;
@@ -25,6 +28,14 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 	private boolean heartsplus$withered;
 	@Unique
 	private boolean heartsplus$frozen;
+	@Unique
+	private boolean heartsplus$visibleGear;
+	@Unique
+	private float heartsplus$lastHealth = Float.NaN;
+	@Unique
+	private float heartsplus$blinkOldHealth;
+	@Unique
+	private int heartsplus$blinkEndTick = Integer.MIN_VALUE;
 
 	@Override
 	@Unique
@@ -70,8 +81,31 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
+	public boolean heartsplus$hasVisibleGear() {
+		return this.heartsplus$visibleGear;
+	}
+
+	@Override
+	@Unique
+	public float heartsplus$getBlinkOldHealth() {
+		return this.heartsplus$blinkOldHealth;
+	}
+
+	@Override
+	@Unique
+	public int heartsplus$getBlinkEndTick() {
+		return this.heartsplus$blinkEndTick;
+	}
+
+	@Override
+	@Unique
 	public void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen) {
+			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleGear, int tick) {
+		if (!Float.isNaN(this.heartsplus$lastHealth) && health < this.heartsplus$lastHealth - 0.01F) {
+			this.heartsplus$blinkOldHealth = this.heartsplus$lastHealth;
+			this.heartsplus$blinkEndTick = tick + heartsplus$BLINK_TICKS;
+		}
+		this.heartsplus$lastHealth = health;
 		this.heartsplus$health = health;
 		this.heartsplus$maxHealth = maxHealth;
 		this.heartsplus$absorption = absorption;
@@ -79,5 +113,6 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
 		this.heartsplus$frozen = frozen;
+		this.heartsplus$visibleGear = hasVisibleGear;
 	}
 }

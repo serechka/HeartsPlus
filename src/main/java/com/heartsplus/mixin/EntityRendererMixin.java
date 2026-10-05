@@ -5,7 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.state.EntityRenderState;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,7 +25,16 @@ public abstract class EntityRendererMixin {
 			boolean isLocalPlayer = player == MinecraftClient.getInstance().player;
 			holder.heartsplus$update(player.getHealth(), player.getMaxHealth(), player.getAbsorptionAmount(), isLocalPlayer,
 					player.hasStatusEffect(StatusEffects.POISON), player.hasStatusEffect(StatusEffects.WITHER),
-					player.isFrozen());
+					player.isFrozen(), hasVisibleGear(player), player.age);
 		}
+	}
+
+	private static boolean hasVisibleGear(PlayerEntity player) {
+		for (EquipmentSlot slot : EquipmentSlot.values()) {
+			if (!player.getEquippedStack(slot).isEmpty()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }
