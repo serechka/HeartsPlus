@@ -2,6 +2,7 @@ name: Release & Publish
 
 # Builds the mod, creates a GitHub release and uploads it to Modrinth.
 # Required repository secrets:
+#   MODRINTH_ID — project id: adAcTcwa (modrinth.com/mod/heartsplus)
 #   MODRINTH_TOKEN — Modrinth API token (modrinth.com/settings/pats)
 # Trigger by pushing a tag:  git tag v1.1.1 && git push origin v1.1.1
 on:
