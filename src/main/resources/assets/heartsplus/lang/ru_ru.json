@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "Включить/выключить индикаторы здоровья",
+	"key.heartsplus.settings": "Открыть настройки HeartsPlus",
+	"heartsplus.config.title": "Настройки HeartsPlus",
+	"heartsplus.config.enabled": "Индикаторы здоровья",
+	"heartsplus.config.show_own": "Показывать над своим игроком",
+	"heartsplus.config.absorption": "Сердечки поглощения",
+	"heartsplus.config.stack": "Сердечки в несколько рядов",
+	"heartsplus.config.hide_invisible": "Скрывать невидимых игроков",
+	"heartsplus.config.hide_sneaking": "Скрывать крадущихся игроков",
+	"heartsplus.config.textures": "Текстуры сердечек",
+	"option.heartsplus.textures.pack": "Из ресурспака",
+	"option.heartsplus.textures.vanilla": "Ванильные (встроенные)",
+	"heartsplus.config.scale": "Масштаб: %s",
+	"heartsplus.config.render_distance": "Дистанция отображения: %s блоков",
+	"heartsplus.config.heart_offset": "Смещение по вертикали: %s",
+	"heartsplus.config.reset": "Сбросить настройки",
+	"heartsplus.message.enabled": "Индикаторы здоровья включены",
+	"heartsplus.message.disabled": "Индикаторы здоровья выключены"
+}

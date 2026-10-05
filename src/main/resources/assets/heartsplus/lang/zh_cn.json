@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "开关生命值显示",
+	"key.heartsplus.settings": "打开 HeartsPlus 设置",
+	"heartsplus.config.title": "HeartsPlus 设置",
+	"heartsplus.config.enabled": "生命值显示",
+	"heartsplus.config.show_own": "显示在自己的玩家上方",
+	"heartsplus.config.absorption": "显示伤害吸收之心",
+	"heartsplus.config.stack": "心形分多行显示",
+	"heartsplus.config.hide_invisible": "隐藏隐身的玩家",
+	"heartsplus.config.hide_sneaking": "隐藏潜行的玩家",
+	"heartsplus.config.textures": "心形材质",
+	"option.heartsplus.textures.pack": "来自资源包",
+	"option.heartsplus.textures.vanilla": "原版（内置）",
+	"heartsplus.config.scale": "缩放：%s",
+	"heartsplus.config.render_distance": "显示距离：%s 格",
+	"heartsplus.config.heart_offset": "垂直偏移：%s",
+	"heartsplus.config.reset": "重置为默认值",
+	"heartsplus.message.enabled": "生命值显示已开启",
+	"heartsplus.message.disabled": "生命值显示已关闭"
+}

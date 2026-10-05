@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "Herzanzeigen ein-/ausschalten",
+	"key.heartsplus.settings": "HeartsPlus-Einstellungen öffnen",
+	"heartsplus.config.title": "HeartsPlus-Einstellungen",
+	"heartsplus.config.enabled": "Herzanzeigen",
+	"heartsplus.config.show_own": "Über dem eigenen Spieler zeigen",
+	"heartsplus.config.absorption": "Absorptionsherzen zeigen",
+	"heartsplus.config.stack": "Herzen in mehreren Reihen",
+	"heartsplus.config.hide_invisible": "Unsichtbare Spieler verbergen",
+	"heartsplus.config.hide_sneaking": "Schleichende Spieler verbergen",
+	"heartsplus.config.textures": "Herz-Texturen",
+	"option.heartsplus.textures.pack": "Aus dem Ressourcenpaket",
+	"option.heartsplus.textures.vanilla": "Vanilla (integriert)",
+	"heartsplus.config.scale": "Skalierung: %s",
+	"heartsplus.config.render_distance": "Sichtweite: %s Blöcke",
+	"heartsplus.config.heart_offset": "Vertikaler Versatz: %s",
+	"heartsplus.config.reset": "Auf Standardwerte zurücksetzen",
+	"heartsplus.message.enabled": "Herzanzeigen aktiviert",
+	"heartsplus.message.disabled": "Herzanzeigen deaktiviert"
+}

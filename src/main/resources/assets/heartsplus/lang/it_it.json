@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "Attiva/disattiva indicatori di vita",
+	"key.heartsplus.settings": "Apri le impostazioni di HeartsPlus",
+	"heartsplus.config.title": "Impostazioni di HeartsPlus",
+	"heartsplus.config.enabled": "Indicatori di vita",
+	"heartsplus.config.show_own": "Mostra sopra il proprio giocatore",
+	"heartsplus.config.absorption": "Mostra cuori di assorbimento",
+	"heartsplus.config.stack": "Cuori su più righe",
+	"heartsplus.config.hide_invisible": "Nascondi i giocatori invisibili",
+	"heartsplus.config.hide_sneaking": "Nascondi i giocatori abbassati",
+	"heartsplus.config.textures": "Texture dei cuori",
+	"option.heartsplus.textures.pack": "Dal resource pack",
+	"option.heartsplus.textures.vanilla": "Vanilla (integrate)",
+	"heartsplus.config.scale": "Scala: %s",
+	"heartsplus.config.render_distance": "Distanza di rendering: %s blocchi",
+	"heartsplus.config.heart_offset": "Offset verticale: %s",
+	"heartsplus.config.reset": "Ripristina valori predefiniti",
+	"heartsplus.message.enabled": "Indicatori di vita attivati",
+	"heartsplus.message.disabled": "Indicatori di vita disattivati"
+}

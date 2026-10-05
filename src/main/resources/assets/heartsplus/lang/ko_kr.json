@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "체력 표시 켜기/끄기",
+	"key.heartsplus.settings": "HeartsPlus 설정 열기",
+	"heartsplus.config.title": "HeartsPlus 설정",
+	"heartsplus.config.enabled": "체력 표시",
+	"heartsplus.config.show_own": "자신의 플레이어 위에 표시",
+	"heartsplus.config.absorption": "흡수 하트 표시",
+	"heartsplus.config.stack": "하트 여러 줄로 표시",
+	"heartsplus.config.hide_invisible": "투명한 플레이어 숨기기",
+	"heartsplus.config.hide_sneaking": "웅크린 플레이어 숨기기",
+	"heartsplus.config.textures": "하트 텍스처",
+	"option.heartsplus.textures.pack": "리소스 팩에서",
+	"option.heartsplus.textures.vanilla": "바닐라(내장)",
+	"heartsplus.config.scale": "크기: %s",
+	"heartsplus.config.render_distance": "표시 거리: %s블록",
+	"heartsplus.config.heart_offset": "수직 오프셋: %s",
+	"heartsplus.config.reset": "기본값으로 초기화",
+	"heartsplus.message.enabled": "체력 표시가 켜졌습니다",
+	"heartsplus.message.disabled": "체력 표시가 꺼졌습니다"
+}

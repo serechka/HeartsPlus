@@ -1,0 +1,21 @@
+{
+	"key.category.heartsplus.main": "HeartsPlus",
+	"key.heartsplus.toggle": "Toggle Health Indicators",
+	"key.heartsplus.settings": "Open HeartsPlus Settings",
+	"heartsplus.config.title": "HeartsPlus Settings",
+	"heartsplus.config.enabled": "Health Indicators",
+	"heartsplus.config.show_own": "Show Above Own Player",
+	"heartsplus.config.absorption": "Show Absorption Hearts",
+	"heartsplus.config.stack": "Stack Hearts in Rows",
+	"heartsplus.config.hide_invisible": "Hide Invisible Players",
+	"heartsplus.config.hide_sneaking": "Hide Sneaking Players",
+	"heartsplus.config.textures": "Heart Textures",
+	"option.heartsplus.textures.pack": "From Resource Pack",
+	"option.heartsplus.textures.vanilla": "Vanilla (built-in)",
+	"heartsplus.config.scale": "Scale: %s",
+	"heartsplus.config.render_distance": "Render Distance: %s blocks",
+	"heartsplus.config.heart_offset": "Vertical Offset: %s",
+	"heartsplus.config.reset": "Reset to Defaults",
+	"heartsplus.message.enabled": "Health indicators enabled",
+	"heartsplus.message.disabled": "Health indicators disabled"
+}
