@@ -1,84 +1,102 @@
+<div align="center">
+
+<img src="branding/icon-512.png" width="128" alt="HeartsPlus icon" />
+
 # HeartsPlus
 
-Клиентский мод **Fabric** для **Minecraft 26.2**, отображающий здоровье игроков ванильными сердечками над головой — как HUD, но в мире. Вдохновлён [PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators), переписан под новую систему рендера Minecraft 26.x (extract/submit render states).
+**See every player's health — as vanilla hearts floating above their heads.**
 
-A client-side **Fabric** mod for **Minecraft 26.2** that shows players' health as vanilla hearts above their heads. Inspired by [PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators), rebuilt for the 26.x extract/submit rendering system.
+[![CI Build](https://img.shields.io/github/actions/workflow/status/serechka/HeartsPlus/build.yml?branch=main&logo=github&label=build)](https://github.com/serechka/HeartsPlus/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Game versions](https://img.shields.io/badge/minecraft-26.1%20%E2%80%93%2026.3-blueviolet)](https://modrinth.com/mod/heartsplus)
+[![Mod loader](https://img.shields.io/badge/loader-Fabric-dbd3c3)](https://fabricmc.net)
 
-## Возможности / Features
+A lightweight, fully configurable client-side Fabric mod for Minecraft **26.1 – 26.3**.<br/>
+Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 
-- 💌 Ванильные спрайты сердец (красные + жёлтые сердечки поглощения) над каждым игроком
-- 🧪 Варианты сердечек: отравление, иссушение, заморозка — как в HUD
-- ⚙️ Экран настроек через **Mod Menu** (или клавишей)
-- 🎨 Выбор текстур: из активного ресурспака или встроенные ванильные
-- 🌍 Локализация: **русский** и **английский**
-- ❤️ Половинки сердец и контейнеры — ровно как в HUD
-- 📏 Настраиваемые масштаб, дистанция и смещение по вертикали
-- 👻 Скрытие невидимых/крадущихся игроков (опционально)
+</div>
 
-## Настройки / Options
+---
 
-| Ключ | По умолчанию | Описание |
-|---|---|---|
-| `enabled` | `true` | Вкл/выкл индикаторы |
-| `showOwnHearts` | `false` | Показывать над своим игроком (виден в F5) |
-| `showAbsorption` | `true` | Жёлтые сердечки поглощения |
-| `stackHearts` | `true` | Ряды по 10 сердец, если их много (лишние ряды — вверх) |
-| `hideWhenInvisible` | `true` | Скрывать невидимых игроков |
-| `hideWhenSneaking` | `false` | Скрывать крадущихся игроков |
-| `useVanillaTextures` | `false` | `false` — спрайты из GUI-атласа (следуют ресурспаку), `true` — встроенные ванильные текстуры |
-| `scale` | `1.0` | Масштаб (0.25–4.0) |
-| `renderDistance` | `64.0` | Дистанция в блоках (8–128) |
-| `heartOffset` | `0` | Смещение по вертикали в «пикселях» GUI (−20–40) |
+## ✨ Features
 
-Конфиг: `.minecraft/config/heartsplus.json`. Все настройки меняются в игре: **Mod Menu → HeartsPlus → Настройки**.
+- 💌 **Vanilla-style hearts** above every player — containers, halves and absorption hearts, exactly like your own HUD
+- 🧪 **Status variants** — poisoned, withered and frozen hearts, chosen with the same priority as the vanilla HUD
+- 📚 **Smart stacking** — long health bars wrap into rows of 10 and grow *upward*, never covering nametags
+- 🎨 **Texture source toggle** — take hearts from your active resource pack, or lock them to the classic vanilla look
+- ⚙️ **In-game config screen** — integrates with [Mod Menu](https://modrinth.com/mod/modmenu), or open it with a keybind
+- 🌍 **11 languages** — English, Русский, Українська, 中文, Español, Português (BR), Deutsch, Français, 日本語, 한국어, Italiano
+- 🔆 **Angle-independent shading** — hearts stay perfectly readable from above or below
+- 🪶 **Featherweight** — no dependencies beyond Fabric API, no overhead when no one is around
 
-## Горячие клавиши / Keybinds
+## 📸 Screenshot
 
-| Клавиша | Действие |
-|---|---|
-| **H** | Вкл/выкл индикаторы |
-| **(не задано)** | Открыть настройки |
+> _A screenshot of the hearts above players' heads in action._
+> _TODO: replace with a real screenshot before publishing._
 
-Настраиваются в: Управление → Категория «HeartsPlus».
+## 📥 Installation
 
-## Сборка / Building
+1. Install the [Fabric Loader](https://fabricmc.net/use/) (≥ 0.19.5) for Minecraft 26.1 – 26.3
+2. Drop **HeartsPlus** and [Fabric API](https://modrinth.com/mod/fabric-api) into your `mods/` folder
+3. *(Optional)* Add [Mod Menu](https://modrinth.com/mod/modmenu) for the settings screen
+4. Join a world — hearts appear above other players instantly
 
-Требуется JDK 25 (например, [Temurin](https://adoptium.net/)):
+> **Multiplayer note:** HeartsPlus is client-side only. Health data comes from what the server
+> already syncs about visible players, so it works on vanilla servers without any server mod.
+
+## ⚙️ Configuration
+
+Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbound by default).
+
+| Option | Default | Description |
+|---|:---:|---|
+| Health Indicators | ON | Master toggle for the whole mod |
+| Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
+| Show Absorption Hearts | ON | Golden hearts from absorption (golden apples, etc.) |
+| Stack Hearts in Rows | ON | Wrap long bars into rows of 10, growing upward |
+| Hide Invisible Players | ON | Skip players under invisibility |
+| Hide Sneaking Players | OFF | Skip sneaking players |
+| Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
+| Scale | 1.0 | Heart size, ×0.25 – ×4 |
+| Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
+| Vertical Offset | 0 | Fine-tune height, −20 – +40 |
+
+Settings persist to `config/heartsplus.json` and apply instantly.
+
+**Keybinds** (Controls → HeartsPlus):
+| Key | Default | Action |
+|---|:---:|---|
+| Toggle Health Indicators | **H** | Quick on/off with an action-bar confirmation |
+| Open HeartsPlus Settings | *unbound* | Open the config screen |
+
+## 🔧 Building from source
+
+Requires **JDK 25** (e.g. [Temurin](https://adoptium.net/)):
 
 ```bash
 ./gradlew build
 ```
 
-Готовый мод: `build/libs/heartsplus-<version>.jar`.
+The mod jar appears in `build/libs/`. CI builds every push; pushing a `v*` tag
+creates a GitHub release and publishes to Modrinth automatically.
 
-## Установка / Installation
+<details>
+<summary>Supported versions</summary>
 
-1. Установите [Fabric Loader](https://fabricmc.net/use/) ≥ 0.19.5 для Minecraft 26.2
-2. Положите в `mods/`: мод + [Fabric API](https://modrinth.com/mod/fabric-api)
-3. (Опционально) [Mod Menu](https://modrinth.com/mod/modmenu) для экрана настроек
+| Branch | Game versions | Status |
+|---|---|---|
+| `main` | 26.1 – 26.3 | actively developed |
+| `1.21` | 1.21.x | legacy line |
 
-## Публикация / Publishing
+</details>
 
-Проект готов к GitHub и Modrinth:
+## 💚 Credits
 
-**GitHub:**
-```bash
-git remote add origin https://github.com/<твой-логин>/HeartsPlus.git
-git push -u origin main        # CI соберёт мод (.github/workflows/build.yml)
-```
+- **[PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators)** by Gaider10 (MIT) — the original inspiration.
+  The heart layout math (rows of ten, row compression, halves) was adapted from it;
+  all HeartsPlus code was written from scratch for the Minecraft 26.x rendering system.
+- Vanilla heart sprites used by the built-in texture mode come from Minecraft itself.
 
-**Modrinth:**
-1. На [modrinth.com](https://modrinth.com) создай проект: slug `heartsplus`, иконка — `branding/icon-512.png`, категория `utility`, загрузчик `Fabric`, игра `26.2`, окружение `Client`, лицензия MIT.
-2. Проще всего публиковать автоматически: добавь в секреты репозитория `MODRINTH_ID` (ID проекта) и `MODRINTH_TOKEN` (PAT из настроек Modrinth) — и пушь теги (`git tag v1.1.1 && git push origin v1.1.1`): workflow `release.yml` сам соберёт джарник, создаст GitHub Release и выложит версию на Modrinth.
-3. Вручную: загрузи `build/libs/heartsplus-<версия>+26.2.jar` (не `-sources`) на страницу версций.
+## 📄 License
 
-Если твой логин на GitHub не `Intador` — поправь `contact` в `src/main/resources/fabric.mod.json`.
-
-## Благодарности / Credits
-
-- **[PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators)** (Gaider10, MIT) — вдохновение и референс поведения: логика раскладки сердечек (ряды по 10, сжатие рядов, половинки) адаптирована из этого мода. Код HeartsPlus написан с нуля под рендер-систему Minecraft 26.x; файлы из репозитория не копировались.
-- Спрайты сердечек «ванильного» режима — стандартные текстуры Minecraft.
-
-## Лицензия / License
-
-MIT.
+[MIT](LICENSE) — free to use, modify and redistribute.

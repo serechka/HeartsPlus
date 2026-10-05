@@ -7,9 +7,12 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 public class HeartsPlusClient implements ClientModInitializer {
+	/** GLFW key codes, inlined so the mod does not depend on the LWJGL glfw package. */
+	private static final int KEY_UNKNOWN = -1;
+	private static final int KEY_H = 72;
+
 	private static KeyMapping toggleRenderingKey;
 	private static KeyMapping openSettingsKey;
 
@@ -20,9 +23,9 @@ public class HeartsPlusClient implements ClientModInitializer {
 		KeyMapping.Category category = KeyMapping.Category.register(
 				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
 		toggleRenderingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.toggle", GLFW.GLFW_KEY_H, category));
+				"key.heartsplus.toggle", KEY_H, category));
 		openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.settings", GLFW.GLFW_KEY_UNKNOWN, category));
+				"key.heartsplus.settings", KEY_UNKNOWN, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (toggleRenderingKey.consumeClick()) {
@@ -30,7 +33,7 @@ public class HeartsPlusClient implements ClientModInitializer {
 				reportState(client);
 			}
 			while (openSettingsKey.consumeClick()) {
-				client.gui.setScreen(new HeartsPlusConfigScreen(null));
+				client.setScreenAndShow(new HeartsPlusConfigScreen(null));
 			}
 		});
 	}

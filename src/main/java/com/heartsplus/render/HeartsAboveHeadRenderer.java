@@ -15,7 +15,6 @@ import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import org.joml.Quaternionf;
 
 /**
  * Draws a row of vanilla heart sprites above an avatar's head.
@@ -71,7 +70,9 @@ public final class HeartsAboveHeadRenderer {
 
 		poseStack.pushPose();
 		poseStack.translate(0.0F, heartsY(state), 0.0F);
-		poseStack.mulPose(new Quaternionf(camera.orientation));
+		// rotateAround(..., 0, 0, 0) equals a plain rotation; it is the only
+		// quaternion-rotation call shared by every supported game version.
+		poseStack.rotateAround(camera.orientation, 0.0F, 0.0F, 0.0F);
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		poseStack.scale(pixelScale, -pixelScale, pixelScale);
 		poseStack.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);

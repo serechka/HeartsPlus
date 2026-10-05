@@ -5,11 +5,11 @@
 	"name": "HeartsPlus",
 	"description": "Displays player health as vanilla hearts above players' heads. Fully configurable, integrates with Mod Menu.",
 	"authors": [
-		"Intador"
+		"serechka"
 	],
 	"contact": {
 		"homepage": "https://modrinth.com/mod/heartsplus",
-		"sources": "https://github.com/Intador/HeartsPlus"
+		"sources": "https://github.com/serechka/HeartsPlus"
 	},
 	"license": "MIT",
 	"icon": "assets/heartsplus/icon.png",
@@ -27,7 +27,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",
-		"minecraft": "~26.2",
+		"minecraft": ">=26.1 <26.4",
 		"java": ">=25",
 		"fabric-api": "*"
 	},

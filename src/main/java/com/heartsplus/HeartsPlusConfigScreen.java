@@ -85,7 +85,7 @@ public class HeartsPlusConfigScreen extends Screen {
 	public void onClose() {
 		HeartsPlusConfig.save();
 		if (this.minecraft != null) {
-			this.minecraft.gui.setScreen(this.parent);
+			this.minecraft.setScreenAndShow(this.parent);
 		}
 	}
 
@@ -94,7 +94,7 @@ public class HeartsPlusConfigScreen extends Screen {
 		// init() appends to the layout fields, so the screen is rebuilt as a
 		// fresh instance instead of re-initializing this one.
 		if (this.minecraft != null) {
-			this.minecraft.gui.setScreen(new HeartsPlusConfigScreen(this.parent));
+			this.minecraft.setScreenAndShow(new HeartsPlusConfigScreen(this.parent));
 		}
 	}
 

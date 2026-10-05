@@ -2,7 +2,8 @@ plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
-version = "${project.mod_version}+${project.minecraft_version}"
+// One jar covers the whole 26.x line (built against 26.2, verified on 26.1–26.3).
+version = "${project.mod_version}+26.x"
 group = project.maven_group
 
 base {
