@@ -86,7 +86,10 @@ creates a GitHub release and publishes to Modrinth automatically.
 | Branch | Game versions | Status |
 |---|---|---|
 | `main` | 26.1 – 26.3 | actively developed |
-| `1.21` | 1.21.x | legacy line |
+| `1.21` | 1.21.11 | legacy line |
+
+Older versions (1.20 – 1.21.10) and the NeoForge/Forge loaders are on the
+[roadmap](ROADMAP.md) — each Minecraft rendering era needs its own port.
 
 </details>
 
