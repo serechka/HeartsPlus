@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,7 +24,17 @@ public abstract class EntityRendererMixin {
 		if (state instanceof HealthHolder holder && entity instanceof Avatar avatar) {
 			boolean isLocalPlayer = avatar == Minecraft.getInstance().player;
 			holder.heartsplus$update(avatar.getHealth(), avatar.getMaxHealth(), avatar.getAbsorptionAmount(), isLocalPlayer,
-					avatar.hasEffect(MobEffects.POISON), avatar.hasEffect(MobEffects.WITHER));
+					avatar.hasEffect(MobEffects.POISON), avatar.hasEffect(MobEffects.WITHER),
+					hasVisibleGear(avatar), avatar.tickCount);
 		}
+	}
+
+	private static boolean hasVisibleGear(Avatar avatar) {
+		for (EquipmentSlot slot : EquipmentSlot.values()) {
+			if (!avatar.getItemBySlot(slot).isEmpty()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

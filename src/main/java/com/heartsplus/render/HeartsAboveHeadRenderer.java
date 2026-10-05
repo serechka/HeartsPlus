@@ -24,19 +24,26 @@ import net.minecraft.util.Mth;
  *
  * <p>Hearts are drawn with the world-text render type, which — like name
  * tags — is shaded only by the lightmap, so they look identical from every
- * viewing angle. Geometry is submitted in three texture passes (containers,
- * health, absorption) because vanilla-texture mode binds individual files
- * instead of the shared GUI atlas.</p>
+ * viewing angle. Like a nameplate, each pass is submitted twice: a bright
+ * normal variant that is occluded by walls, and a dim see-through variant
+ * that shows through walls. Sneaking players get no hearts at all, matching
+ * how vanilla hides their name tag. Recent health drops blink exactly like
+ * the vanilla HUD does. Geometry is submitted in passes per texture
+ * (containers, health, blinking, absorption) because vanilla-texture mode
+ * binds individual files instead of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	/** One nameplate text row in world units; must track vanilla EntityRenderer.submitNameDisplay. */
 	private static final float NAMETAG_ROW_HEIGHT = 9.0F * 1.15F * 0.025F;
+	/** Small breathing room between the nameplate and the bottom heart row, in world units. */
+	private static final float NAMEPLATE_GAP = 2.0F * 0.025F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	private static final float HEART_SIZE = 9.0F;
 	private static final float HEART_SPACING = 8.0F;
 	private static final int HEARTS_PER_ROW = 10;
 	private static final int ROW_SPACING_BASE = 10;
 	private static final int MIN_ROW_SPACING = 3;
+	private static final int BLINK_INTERVAL_TICKS = 3;
 
 	private HeartsAboveHeadRenderer() {
 	}
@@ -53,20 +60,25 @@ public final class HeartsAboveHeadRenderer {
 		if (state.distanceToCameraSq > maxDistance * maxDistance) {
 			return;
 		}
-		if (HeartsPlusConfig.isHideWhenInvisible() && state.isInvisibleToPlayer) {
+		if (state.isInvisibleToPlayer && HeartsPlusConfig.isHideWhenInvisible() && !health.heartsplus$hasVisibleGear()) {
+			// Invisible players only give themselves away through visible
+			// armour or a held item, which feels fair in PvP.
 			return;
 		}
 		if (HeartsPlusConfig.isHideWhenSneaking() && state.isCrouching) {
 			return;
 		}
 
-		AtlasManager atlasManager = Minecraft.getInstance().getAtlasManager();
+		Minecraft minecraft = Minecraft.getInstance();
+		AtlasManager atlasManager = minecraft.getAtlasManager();
 		HeartType family = HeartType.forStatus(health.heartsplus$isPoisoned(), health.heartsplus$isWithered(), state.isFullyFrozen);
-		ResolvedSprite container = resolve(HeartType.CONTAINER, false, atlasManager);
-		ResolvedSprite familyFull = resolve(family, false, atlasManager);
-		ResolvedSprite familyHalf = resolve(family, true, atlasManager);
-		ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, atlasManager);
-		ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, atlasManager);
+		ResolvedSprite container = resolve(HeartType.CONTAINER, false, false, atlasManager);
+		ResolvedSprite familyFull = resolve(family, false, false, atlasManager);
+		ResolvedSprite familyHalf = resolve(family, true, false, atlasManager);
+		ResolvedSprite familyFullBlinking = resolve(family, false, true, atlasManager);
+		ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
+		ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, false, atlasManager);
+		ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, false, atlasManager);
 
 		poseStack.pushPose();
 		poseStack.translate(0.0F, heartsY(state), 0.0F);
@@ -79,6 +91,8 @@ public final class HeartsAboveHeadRenderer {
 
 		Layout layout = layoutOf(health);
 		int light = state.lightCoords;
+		int blinkFrom = layout.heartsRed();
+		int blinkTo = blinkTo(health, layout, (int) Math.floor(state.ageInTicks));
 
 		submitPass(collector, poseStack, container, (pose, vertices) -> {
 			for (int heart = 0; heart < layout.heartsTotal(); heart++) {
@@ -95,6 +109,19 @@ public final class HeartsAboveHeadRenderer {
 		if (layout.hasRedHalf()) {
 			submitPass(collector, poseStack, familyHalf, (pose, vertices) ->
 					emitHeart(pose, vertices, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light));
+		}
+		if (blinkTo > blinkFrom) {
+			submitPass(collector, poseStack, familyFullBlinking, (pose, vertices) -> {
+				for (int heart = blinkFrom; heart < blinkTo; heart++) {
+					if (heart != blinkTo - 1 || !layout.lastBlinkHalf()) {
+						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFullBlinking, light);
+					}
+				}
+			});
+			if (layout.lastBlinkHalf()) {
+				submitPass(collector, poseStack, familyHalfBlinking, (pose, vertices) ->
+						emitHeart(pose, vertices, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light));
+			}
 		}
 		if (HeartsPlusConfig.isShowAbsorption()) {
 			submitPass(collector, poseStack, absorbingFull, (pose, vertices) -> {
@@ -113,20 +140,41 @@ public final class HeartsAboveHeadRenderer {
 		poseStack.popPose();
 	}
 
-	private static ResolvedSprite resolve(HeartType type, boolean half, AtlasManager atlasManager) {
+	private static ResolvedSprite resolve(HeartType type, boolean half, boolean blinking, AtlasManager atlasManager) {
 		if (HeartsPlusConfig.isUseVanillaTextures()) {
-			Identifier texture = half ? type.fileHalf : type.fileFull;
+			Identifier texture = blinking
+					? half ? type.fileHalfBlinking : type.fileFullBlinking
+					: half ? type.fileHalf : type.fileFull;
 			return new ResolvedSprite(texture, 0.0F, 0.0F, 1.0F, 1.0F);
 		}
-		Identifier spriteId = half ? type.atlasHalf : type.atlasFull;
+		Identifier spriteId = blinking
+				? half ? type.atlasHalfBlinking : type.atlasFullBlinking
+				: half ? type.atlasHalf : type.atlasFull;
 		TextureAtlasSprite sprite = atlasManager.get(new SpriteId(Sheets.GUI_SHEET, spriteId));
 		return new ResolvedSprite(sprite.atlasLocation(), sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
 	}
 
 	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite,
 			SubmitNodeCollector.CustomGeometryRenderer renderer) {
-		RenderType renderType = RenderTypes.text(sprite.texture());
-		collector.submitCustomGeometry(poseStack, renderType, renderer);
+		// Mirrors vanilla nameplates: the normal layer is occluded by walls,
+		// the see-through layer shows dimly through them.
+		collector.submitCustomGeometry(poseStack, RenderTypes.text(sprite.texture()), renderer);
+		collector.submitCustomGeometry(poseStack, RenderTypes.textSeeThrough(sprite.texture()), renderer);
+	}
+
+	/**
+	 * Hearts between the current and pre-drop health blink for a short window
+	 * after damage, alternating on a fixed cadence like the vanilla HUD.
+	 * Returns the exclusive upper heart index, or the current index when not
+	 * in the blink window / on the "off" beat of the cadence.
+	 */
+	private static int blinkTo(HealthHolder health, Layout layout, int nowTick) {
+		if (nowTick >= health.heartsplus$getBlinkEndTick()
+				|| health.heartsplus$getBlinkOldHealth() <= health.heartsplus$getHealth()
+				|| nowTick / BLINK_INTERVAL_TICKS % 2 != 0) {
+			return layout.heartsRed();
+		}
+		return Math.min(layout.heartsBlink(), layout.heartsNormal());
 	}
 
 	/**
@@ -136,13 +184,13 @@ public final class HeartsAboveHeadRenderer {
 	 */
 	private static float heartsY(AvatarRenderState state) {
 		if (state.nameTag != null && state.nameTagAttachment != null) {
-			float y = (float) state.nameTagAttachment.y + 0.5F + NAMETAG_ROW_HEIGHT;
+			float y = (float) state.nameTagAttachment.y + 0.5F + NAMETAG_ROW_HEIGHT + NAMEPLATE_GAP;
 			if (state.scoreText != null) {
 				y += NAMETAG_ROW_HEIGHT;
 			}
 			return y;
 		}
-		return state.boundingBoxHeight + 0.5F;
+		return state.boundingBoxHeight + 0.5F + NAMEPLATE_GAP;
 	}
 
 	private static Layout layoutOf(HealthHolder health) {
@@ -157,6 +205,10 @@ public final class HeartsAboveHeadRenderer {
 		boolean lastYellowHalf = (healthYellow & 1) == 1;
 		int heartsTotal = heartsNormal + heartsYellow;
 
+		int blinkHalves = Mth.ceil(health.heartsplus$getBlinkOldHealth());
+		int heartsBlink = Mth.ceil(blinkHalves / 2.0F);
+		boolean lastBlinkHalf = (blinkHalves & 1) == 1;
+
 		int heartsPerRow = HeartsPlusConfig.isStackHearts() ? HEARTS_PER_ROW : Math.max(heartsTotal, 1);
 		int rowsTotal = (heartsTotal + heartsPerRow - 1) / heartsPerRow;
 		// Vanilla-like row compression: rows slide closer together as the bar
@@ -165,8 +217,8 @@ public final class HeartsAboveHeadRenderer {
 		float rowWidth = Math.min(heartsTotal, heartsPerRow) * HEART_SPACING + 1.0F;
 		float startX = -rowWidth / 2.0F;
 
-		return new Layout(heartsRed, heartsNormal, heartsTotal, lastRedHalf, lastYellowHalf,
-				heartsPerRow, rowOffset, startX);
+		return new Layout(heartsRed, heartsNormal, heartsTotal, lastRedHalf, lastYellowHalf, lastBlinkHalf,
+				heartsPerRow, rowOffset, startX, heartsBlink);
 	}
 
 	/**
@@ -174,7 +226,7 @@ public final class HeartsAboveHeadRenderer {
 	 * the nameplate); extra rows stack upward like the vanilla HUD.
 	 */
 	private record Layout(int heartsRed, int heartsNormal, int heartsTotal, boolean lastRedHalf, boolean lastYellowHalf,
-			int heartsPerRow, int rowOffset, float startX) {
+			boolean lastBlinkHalf, int heartsPerRow, int rowOffset, float startX, int heartsBlink) {
 
 		float x(int heart) {
 			return this.startX + heart % this.heartsPerRow * HEART_SPACING;
