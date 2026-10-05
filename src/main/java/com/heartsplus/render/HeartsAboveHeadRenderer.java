@@ -1,35 +1,35 @@
 package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.client.renderer.Sheets;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.sprite.AtlasManager;
-import net.minecraft.client.resources.model.sprite.SpriteId;
-import net.minecraft.resources.Identifier;
-import net.minecraft.util.Mth;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.RenderLayers;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.command.OrderedRenderCommandQueue;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.render.state.CameraRenderState;
+import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.util.SpriteIdentifier;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.MathHelper;
+import org.joml.Matrix4fc;
+import org.joml.Quaternionf;
 
 /**
- * Draws a row of vanilla heart sprites above an avatar's head.
- * Called at the end of LivingEntityRenderer.submit, so the incoming
- * PoseStack is positioned at the entity origin and the geometry is
- * recorded through the frame's SubmitNodeCollector.
+ * Draws a row of vanilla heart sprites above a player's head (1.21.9+ line).
+ * Called at the end of LivingEntityRenderer.render, so the incoming MatrixStack
+ * is positioned at the entity origin and the geometry is recorded through the
+ * frame's OrderedRenderCommandQueue.
  *
- * <p>Hearts are drawn with the world-text render type, which — like name
+ * <p>Hearts are drawn with the world-text render layer, which — like name
  * tags — is shaded only by the lightmap, so they look identical from every
- * viewing angle. Geometry is submitted in three texture passes (containers,
- * health, absorption) because vanilla-texture mode binds individual files
- * instead of the shared GUI atlas.</p>
+ * viewing angle. Geometry is submitted in separate passes per texture
+ * (containers, health, absorption) because vanilla-texture mode binds
+ * individual files instead of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
-	/** One nameplate text row in world units; must track vanilla EntityRenderer.submitNameDisplay. */
+	/** One nameplate text row in world units; must track vanilla label rendering. */
 	private static final float NAMETAG_ROW_HEIGHT = 9.0F * 1.15F * 0.025F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	private static final float HEART_SIZE = 9.0F;
@@ -37,123 +37,119 @@ public final class HeartsAboveHeadRenderer {
 	private static final int HEARTS_PER_ROW = 10;
 	private static final int ROW_SPACING_BASE = 10;
 	private static final int MIN_ROW_SPACING = 3;
+	private static final Identifier GUI_ATLAS = Identifier.ofVanilla("textures/atlas/gui.png");
 
 	private HeartsAboveHeadRenderer() {
 	}
 
-	public static void render(AvatarRenderState state, HealthHolder health, PoseStack poseStack,
-			SubmitNodeCollector collector, CameraRenderState camera) {
-		if (!HeartsPlusConfig.isEnabled() || state.isSpectator) {
+	public static void render(PlayerEntityRenderState state, HealthHolder health, MatrixStack matrices,
+			OrderedRenderCommandQueue queue, CameraRenderState cameraState) {
+		if (!HeartsPlusConfig.isEnabled()) {
 			return;
 		}
 		if (health.heartsplus$isLocalPlayer() && !HeartsPlusConfig.isShowOwnHearts()) {
 			return;
 		}
 		double maxDistance = HeartsPlusConfig.getRenderDistance();
-		if (state.distanceToCameraSq > maxDistance * maxDistance) {
+		if (state.squaredDistanceToCamera > maxDistance * maxDistance) {
 			return;
 		}
-		if (HeartsPlusConfig.isHideWhenInvisible() && state.isInvisibleToPlayer) {
+		if (HeartsPlusConfig.isHideWhenInvisible() && state.invisibleToPlayer) {
 			return;
 		}
-		if (HeartsPlusConfig.isHideWhenSneaking() && state.isCrouching) {
+		if (HeartsPlusConfig.isHideWhenSneaking() && state.sneaking) {
 			return;
 		}
 
-		AtlasManager atlasManager = Minecraft.getInstance().getAtlasManager();
-		HeartType family = HeartType.forStatus(health.heartsplus$isPoisoned(), health.heartsplus$isWithered(), state.isFullyFrozen);
-		ResolvedSprite container = resolve(HeartType.CONTAINER, false, atlasManager);
-		ResolvedSprite familyFull = resolve(family, false, atlasManager);
-		ResolvedSprite familyHalf = resolve(family, true, atlasManager);
-		ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, atlasManager);
-		ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, atlasManager);
+		HeartType family = HeartType.forStatus(health.heartsplus$isPoisoned(), health.heartsplus$isWithered(),
+				health.heartsplus$isFrozen());
+		ResolvedSprite container = resolve(HeartType.CONTAINER, false);
+		ResolvedSprite familyFull = resolve(family, false);
+		ResolvedSprite familyHalf = resolve(family, true);
+		ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false);
+		ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true);
 
-		poseStack.pushPose();
-		poseStack.translate(0.0F, heartsY(state), 0.0F);
-		// rotateAround(..., 0, 0, 0) equals a plain rotation; it is the only
-		// quaternion-rotation call shared by every supported game version.
-		poseStack.rotateAround(camera.orientation, 0.0F, 0.0F, 0.0F);
+		matrices.push();
+		matrices.translate(0.0F, heartsY(state), 0.0F);
+		matrices.multiply(new Quaternionf(cameraState.orientation));
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
-		poseStack.scale(pixelScale, -pixelScale, pixelScale);
-		poseStack.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
+		matrices.scale(pixelScale, -pixelScale, pixelScale);
+		matrices.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
 
+		int light = state.light;
 		Layout layout = layoutOf(health);
-		int light = state.lightCoords;
 
-		submitPass(collector, poseStack, container, (pose, vertices) -> {
+		submitPass(queue, matrices, container, (entry, vertices) -> {
 			for (int heart = 0; heart < layout.heartsTotal(); heart++) {
-				emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), container, light);
+				emitHeart(vertices, entry.getPositionMatrix(), layout.x(heart), layout.yTop(heart), container, light);
 			}
 		});
-		submitPass(collector, poseStack, familyFull, (pose, vertices) -> {
+		submitPass(queue, matrices, familyFull, (entry, vertices) -> {
 			for (int heart = 0; heart < layout.heartsRed(); heart++) {
 				if (!layout.isRedHalf(heart)) {
-					emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFull, light);
+					emitHeart(vertices, entry.getPositionMatrix(), layout.x(heart), layout.yTop(heart), familyFull, light);
 				}
 			}
 		});
 		if (layout.hasRedHalf()) {
-			submitPass(collector, poseStack, familyHalf, (pose, vertices) ->
-					emitHeart(pose, vertices, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light));
+			submitPass(queue, matrices, familyHalf, (entry, vertices) ->
+					emitHeart(vertices, entry.getPositionMatrix(), layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light));
 		}
-		if (HeartsPlusConfig.isShowAbsorption()) {
-			submitPass(collector, poseStack, absorbingFull, (pose, vertices) -> {
+		if (HeartsPlusConfig.isShowAbsorption() && layout.heartsTotal() > layout.heartsNormal()) {
+			submitPass(queue, matrices, absorbingFull, (entry, vertices) -> {
 				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
 					if (!layout.isYellowHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light);
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(heart), layout.yTop(heart), absorbingFull, light);
 					}
 				}
 			});
 			if (layout.hasYellowHalf()) {
-				submitPass(collector, poseStack, absorbingHalf, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light));
+				submitPass(queue, matrices, absorbingHalf, (entry, vertices) ->
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1),
+								absorbingHalf, light));
 			}
 		}
 
-		poseStack.popPose();
+		matrices.pop();
 	}
 
-	private static ResolvedSprite resolve(HeartType type, boolean half, AtlasManager atlasManager) {
+	private static ResolvedSprite resolve(HeartType type, boolean half) {
 		if (HeartsPlusConfig.isUseVanillaTextures()) {
-			Identifier texture = half ? type.fileHalf : type.fileFull;
-			return new ResolvedSprite(texture, 0.0F, 0.0F, 1.0F, 1.0F);
+			// Standalone texture files are drawn whole, so UV covers 0..1.
+			return new ResolvedSprite(half ? type.fileHalf : type.fileFull, 0.0F, 0.0F, 1.0F, 1.0F);
 		}
-		Identifier spriteId = half ? type.atlasHalf : type.atlasFull;
-		TextureAtlasSprite sprite = atlasManager.get(new SpriteId(Sheets.GUI_SHEET, spriteId));
-		return new ResolvedSprite(sprite.atlasLocation(), sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
+		Sprite sprite = MinecraftClient.getInstance().getAtlasManager()
+				.getSprite(new SpriteIdentifier(GUI_ATLAS, half ? type.atlasHalf : type.atlasFull));
+		return new ResolvedSprite(sprite.getAtlasId(), sprite.getMinU(), sprite.getMinV(),
+				sprite.getMaxU(), sprite.getMaxV());
 	}
 
-	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite,
-			SubmitNodeCollector.CustomGeometryRenderer renderer) {
-		RenderType renderType = RenderTypes.text(sprite.texture());
-		collector.submitCustomGeometry(poseStack, renderType, renderer);
+	private static void submitPass(OrderedRenderCommandQueue queue, MatrixStack matrices, ResolvedSprite sprite,
+			OrderedRenderCommandQueue.Custom renderer) {
+		RenderLayer renderLayer = RenderLayers.text(sprite.texture());
+		queue.submitCustom(matrices, renderLayer, renderer);
 	}
 
 	/**
 	 * Height above the entity origin, sitting on top of the nameplate
 	 * when one is displayed, mirroring vanilla name tag placement.
-	 * The +0.5F pad matches the nameplate attachment lift vanilla applies.
 	 */
-	private static float heartsY(AvatarRenderState state) {
-		if (state.nameTag != null && state.nameTagAttachment != null) {
-			float y = (float) state.nameTagAttachment.y + 0.5F + NAMETAG_ROW_HEIGHT;
-			if (state.scoreText != null) {
-				y += NAMETAG_ROW_HEIGHT;
-			}
-			return y;
+	private static float heartsY(PlayerEntityRenderState state) {
+		if (state.displayName != null && state.nameLabelPos != null) {
+			return (float) state.nameLabelPos.y + 0.5F + NAMETAG_ROW_HEIGHT;
 		}
-		return state.boundingBoxHeight + 0.5F;
+		return state.height + 0.5F;
 	}
 
 	private static Layout layoutOf(HealthHolder health) {
-		int healthRed = Mth.ceil(health.heartsplus$getHealth());
-		int maxHealth = Mth.ceil(health.heartsplus$getMaxHealth());
-		int healthYellow = Mth.ceil(health.heartsplus$getAbsorption());
+		int healthRed = MathHelper.ceil(health.heartsplus$getHealth());
+		int maxHealth = MathHelper.ceil(health.heartsplus$getMaxHealth());
+		int healthYellow = MathHelper.ceil(health.heartsplus$getAbsorption());
 
-		int heartsRed = Mth.ceil(healthRed / 2.0F);
+		int heartsRed = MathHelper.ceil(healthRed / 2.0F);
 		boolean lastRedHalf = (healthRed & 1) == 1;
-		int heartsNormal = Mth.ceil(maxHealth / 2.0F);
-		int heartsYellow = HeartsPlusConfig.isShowAbsorption() ? Mth.ceil(healthYellow / 2.0F) : 0;
+		int heartsNormal = MathHelper.ceil(maxHealth / 2.0F);
+		int heartsYellow = HeartsPlusConfig.isShowAbsorption() ? MathHelper.ceil(healthYellow / 2.0F) : 0;
 		boolean lastYellowHalf = (healthYellow & 1) == 1;
 		int heartsTotal = heartsNormal + heartsYellow;
 
@@ -205,19 +201,13 @@ public final class HeartsAboveHeadRenderer {
 	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
 	}
 
-	private static void emitHeart(PoseStack.Pose pose, VertexConsumer vertices, float x, float yTop,
+	private static void emitHeart(VertexConsumer vertices, Matrix4fc matrix, float x, float yTop,
 			ResolvedSprite sprite, int light) {
 		float endX = x + HEART_SIZE;
 		float endY = yTop + HEART_SIZE;
-		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
-		// element must be set or the BufferBuilder validation rejects the vertex.
-		vertices.addVertex(pose, x, yTop, 0.0F).setUv(sprite.u0(), sprite.v0())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, endY, 0.0F).setUv(sprite.u1(), sprite.v1())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
-				.setLight(light).setColor(255, 255, 255, 255);
+		vertices.vertex(matrix, x, yTop, 0.0F).color(255, 255, 255, 255).texture(sprite.u0(), sprite.v0()).light(light);
+		vertices.vertex(matrix, endX, yTop, 0.0F).color(255, 255, 255, 255).texture(sprite.u1(), sprite.v0()).light(light);
+		vertices.vertex(matrix, endX, endY, 0.0F).color(255, 255, 255, 255).texture(sprite.u1(), sprite.v1()).light(light);
+		vertices.vertex(matrix, x, endY, 0.0F).color(255, 255, 255, 255).texture(sprite.u0(), sprite.v1()).light(light);
 	}
 }

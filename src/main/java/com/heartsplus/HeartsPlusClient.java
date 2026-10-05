@@ -2,47 +2,46 @@ package com.heartsplus;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.minecraft.client.KeyMapping;
-import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
+import org.lwjgl.glfw.GLFW;
 
 public class HeartsPlusClient implements ClientModInitializer {
-	/** GLFW key codes, inlined so the mod does not depend on the LWJGL glfw package. */
-	private static final int KEY_UNKNOWN = -1;
-	private static final int KEY_H = 72;
-
-	private static KeyMapping toggleRenderingKey;
-	private static KeyMapping openSettingsKey;
+	private static KeyBinding toggleRenderingKey;
+	private static KeyBinding openSettingsKey;
 
 	@Override
 	public void onInitializeClient() {
 		HeartsPlusConfig.load();
 
-		KeyMapping.Category category = KeyMapping.Category.register(
-				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
-		toggleRenderingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.toggle", KEY_H, category));
-		openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.settings", KEY_UNKNOWN, category));
+		KeyBinding.Category category = KeyBinding.Category.create(
+				Identifier.of(HeartsPlus.MOD_ID, "main"));
+		toggleRenderingKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"key.heartsplus.toggle", GLFW.GLFW_KEY_H, category));
+		openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+				"key.heartsplus.settings", GLFW.GLFW_KEY_UNKNOWN, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			while (toggleRenderingKey.consumeClick()) {
+			while (toggleRenderingKey.wasPressed()) {
 				HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());
 				reportState(client);
 			}
-			while (openSettingsKey.consumeClick()) {
-				client.setScreenAndShow(new HeartsPlusConfigScreen(null));
+			while (openSettingsKey.wasPressed()) {
+				if (client.currentScreen == null) {
+					client.setScreen(new HeartsPlusConfigScreen(null));
+				}
 			}
 		});
 	}
 
-	private static void reportState(Minecraft client) {
+	private static void reportState(MinecraftClient client) {
 		if (client.player != null) {
-			client.player.sendOverlayMessage(HeartsPlusConfig.isEnabled()
-					? Component.translatable("heartsplus.message.enabled")
-					: Component.translatable("heartsplus.message.disabled"));
+			client.player.sendMessage(HeartsPlusConfig.isEnabled()
+					? Text.translatable("heartsplus.message.enabled")
+					: Text.translatable("heartsplus.message.disabled"), true);
 		}
 	}
 }

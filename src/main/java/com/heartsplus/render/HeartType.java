@@ -1,12 +1,12 @@
 package com.heartsplus.render;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.util.Identifier;
 
 /**
- * Heart families mirroring vanilla Hud.HeartType. Each family knows both its
- * GUI-atlas sprite (follows the active resource pack) and a copy of the
- * vanilla texture bundled with the mod, so the player can pin the look to
- * the default textures regardless of any installed pack.
+ * Heart families mirroring vanilla InGameHud.HeartType. Each family knows both
+ * its GUI-atlas sprite (follows the active resource pack) and a copy of the
+ * vanilla texture bundled with the mod, so the player can pin the look to the
+ * default textures regardless of any installed pack.
  */
 public enum HeartType {
 	CONTAINER("container", "container"),
@@ -24,15 +24,15 @@ public enum HeartType {
 	public final Identifier fileHalf;
 
 	HeartType(String full, String half) {
-		this.atlasFull = Identifier.withDefaultNamespace("hud/heart/" + full);
-		this.atlasHalf = Identifier.withDefaultNamespace("hud/heart/" + half);
-		this.fileFull = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + full + ".png");
-		this.fileHalf = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + half + ".png");
+		this.atlasFull = Identifier.ofVanilla("hud/heart/" + full);
+		this.atlasHalf = Identifier.ofVanilla("hud/heart/" + half);
+		this.fileFull = Identifier.of("heartsplus", "textures/vanilla/" + full + ".png");
+		this.fileHalf = Identifier.of("heartsplus", "textures/vanilla/" + half + ".png");
 	}
 
 	/**
 	 * The family vanilla's HUD would show for a player with the given status
-	 * effects; priority matches Hud.HeartType.forPlayer.
+	 * effects; priority matches InGameHud.HeartType.forPlayer.
 	 */
 	public static HeartType forStatus(boolean poisoned, boolean withered, boolean frozen) {
 		if (poisoned) {

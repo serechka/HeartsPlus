@@ -1,9 +1,9 @@
 package com.heartsplus.render;
 
 /**
- * Duck-typed interface injected onto {@code AvatarRenderState} by mixin.
- * AvatarRenderState itself carries no health data, so EntityRendererMixin
- * fills these values while the render state is being extracted from the entity.
+ * Duck-typed interface injected onto {@code PlayerEntityRenderState} by mixin.
+ * The render state carries no health data, so LivingEntityRendererMixin fills
+ * these values while the state is being extracted from the entity.
  */
 public interface HealthHolder {
 	float heartsplus$getHealth();
@@ -18,6 +18,8 @@ public interface HealthHolder {
 
 	boolean heartsplus$isWithered();
 
+	boolean heartsplus$isFrozen();
+
 	void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered);
+			boolean poisoned, boolean withered, boolean frozen);
 }

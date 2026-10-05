@@ -1,16 +1,16 @@
 package com.heartsplus.mixin;
 
 import com.heartsplus.render.HealthHolder;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
- * Attaches health data to the vanilla AvatarRenderState so the submit
+ * Attaches health data to the vanilla PlayerEntityRenderState so the render
  * phase can draw hearts without reaching back into the entity.
  */
-@Mixin(AvatarRenderState.class)
-public abstract class AvatarRenderStateMixin implements HealthHolder {
+@Mixin(PlayerEntityRenderState.class)
+public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 	@Unique
 	private float heartsplus$health;
 	@Unique
@@ -23,6 +23,8 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 	private boolean heartsplus$poisoned;
 	@Unique
 	private boolean heartsplus$withered;
+	@Unique
+	private boolean heartsplus$frozen;
 
 	@Override
 	@Unique
@@ -62,13 +64,20 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
+	public boolean heartsplus$isFrozen() {
+		return this.heartsplus$frozen;
+	}
+
+	@Override
+	@Unique
 	public void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered) {
+			boolean poisoned, boolean withered, boolean frozen) {
 		this.heartsplus$health = health;
 		this.heartsplus$maxHealth = maxHealth;
 		this.heartsplus$absorption = absorption;
 		this.heartsplus$localPlayer = localPlayer;
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
+		this.heartsplus$frozen = frozen;
 	}
 }
