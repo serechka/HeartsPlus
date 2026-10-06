@@ -44,7 +44,7 @@ public final class HeartsPlusConfig {
 	private boolean modEnabled = true;
 	private boolean showOwnHearts = false;
 	private boolean showInvisiblePlayers = false;
-	private boolean showBehindBlocks = false;
+	private boolean showBehindBlocks = true;
 	private boolean vanillaTextures = false;
 	private boolean blinkAnimation = true;
 	private int heartOffset = DEFAULT_HEART_OFFSET;
@@ -83,9 +83,10 @@ public final class HeartsPlusConfig {
 	}
 
 	/**
-	 * When false (default) hearts are hidden behind walls like normal
-	 * geometry; when true, every pass is also drawn with a depth-test-free
-	 * see-through render type so hearts stay visible through blocks.
+	 * When true (default) hearts are drawn like a name tag: the depth-tested
+	 * pass plus a dimmed half-transparent see-through copy that stays visible
+	 * through blocks. When false only the depth-tested pass is drawn, so walls
+	 * hide the hearts. Sneaking players never get hearts either way.
 	 */
 	public static boolean isShowBehindBlocks() {
 		return instance.showBehindBlocks;
