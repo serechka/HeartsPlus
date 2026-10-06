@@ -15,7 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Copies player health into the render state while it is being updated,
- * bridging the gap left by the 1.21.9+ extract/render split.
+ * bridging the gap left by the 1.21.9+ extract/render split. The player's
+ * UUID goes along so BlinkTracker can keep the damage-blink history alive
+ * across recycled render states.
  */
 @Mixin(EntityRenderer.class)
 public abstract class EntityRendererMixin {
@@ -23,7 +25,7 @@ public abstract class EntityRendererMixin {
 	private void heartsplus$captureHealth(Entity entity, EntityRenderState state, float tickProgress, CallbackInfo ci) {
 		if (state instanceof HealthHolder holder && entity instanceof PlayerEntity player) {
 			boolean isLocalPlayer = player == MinecraftClient.getInstance().player;
-			holder.heartsplus$update(player.getHealth(), player.getMaxHealth(), player.getAbsorptionAmount(), isLocalPlayer,
+			holder.heartsplus$update(player.getUuid(), player.getHealth(), player.getMaxHealth(), player.getAbsorptionAmount(), isLocalPlayer,
 					player.hasStatusEffect(StatusEffects.POISON), player.hasStatusEffect(StatusEffects.WITHER),
 					player.isFrozen(), hasVisibleArmour(player), player.age);
 		}

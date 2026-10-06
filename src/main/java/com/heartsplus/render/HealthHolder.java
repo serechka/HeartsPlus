@@ -1,11 +1,13 @@
 package com.heartsplus.render;
 
+import java.util.UUID;
+
 /**
  * Duck-typed interface injected onto {@code PlayerEntityRenderState} by mixin.
  * The render state itself carries no health data, so EntityRendererMixin
  * fills these values while the render state is being extracted from the entity.
- * The mixin also tracks recent health drops to drive the vanilla-style
- * damage blink animation.
+ * The damage-blink history lives in {@link BlinkTracker}, keyed by the
+ * player's UUID so it survives render-state recycling.
  */
 public interface HealthHolder {
 	float heartsplus$getHealth();
@@ -31,6 +33,6 @@ public interface HealthHolder {
 	/** Game tick until which the blink animation plays. */
 	int heartsplus$getBlinkEndTick();
 
-	void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
+	void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
 			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour, int tick);
 }
