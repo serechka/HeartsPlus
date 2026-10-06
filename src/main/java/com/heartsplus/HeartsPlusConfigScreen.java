@@ -42,8 +42,8 @@ public class HeartsPlusConfigScreen extends Screen {
 		addRenderableWidget(CycleButton.builder(
 						(Boolean value) -> value
 								? Component.translatable("option.heartsplus.textures.vanilla")
-								: Component.translatable("option.heartsplus.textures.pack"),
-						HeartsPlusConfig.isVanillaTextures())
+								: Component.translatable("option.heartsplus.textures.pack"))
+				.withInitialValue(HeartsPlusConfig.isVanillaTextures())
 				.create(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
 

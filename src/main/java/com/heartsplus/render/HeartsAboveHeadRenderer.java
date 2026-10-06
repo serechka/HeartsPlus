@@ -2,55 +2,56 @@ package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
 import com.heartsplus.HeartsPlusLog;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.AddressMode;
-import com.mojang.blaze3d.textures.FilterMode;
+import com.heartsplus.mixin.EntityRenderDispatcherMixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.gui.GuiSpriteManager;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.renderer.texture.TextureContents;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.resources.model.AtlasManager;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
 /**
- * Draws a row of vanilla heart sprites above a player's head (1.21.x line).
- * Called at the end of LivingEntityRenderer.submit, so the incoming PoseStack
- * is positioned at the entity origin and the geometry is recorded through the
- * frame's SubmitNodeCollector.
+ * Draws a row of vanilla heart sprites above a player's head (classic
+ * 1.21.0/1.21.1 pipeline). Called at the end of LivingEntityRenderer.render,
+ * so the incoming PoseStack is positioned at the entity origin and quads
+ * can be emitted straight into the frame's MultiBufferSource.
  *
- * <p>Hearts are drawn with the world-text render types, which — like name
- * tags — are shaded only by the lightmap. The anchor height is a fixed
- * constant so the bar never jumps with pose changes. Each sprite family sits
- * on its own z layer (containers deepest, overlays closest) so the depth
- * test cannot hide the health hearts behind their containers. When "show
- * behind blocks" is on, every pass is also submitted with the see-through
- * text render type, mirroring how vanilla name tags draw their see-through
- * part. Sneaking players always get hearts. Recent health drops blink
- * exactly like the vanilla HUD does. Geometry is submitted in passes per
- * texture (containers, health, blinking, absorption) because
- * vanilla-texture mode binds individual files instead of the shared GUI
- * atlas.</p>
+ * <p>The transform mirrors the vanilla name tag recipe from
+ * EntityRenderer.renderNameTag: translate to the anchor, rotate by the
+ * camera orientation, scale(0.025 * scale, -0.025 * scale, 0.025 * scale).
+ * Hearts are drawn with the world-text render types, which — like name
+ * tags — are shaded only by the lightmap, so they look identical from every
+ * viewing angle. The anchor height is a fixed constant so the bar never jumps
+ * with pose changes. Each sprite family sits on its own z layer (containers
+ * deepest, overlays closest) so the depth test cannot hide the health hearts
+ * behind their containers. When "show behind blocks" is on, every pass is
+ * also submitted with the see-through text render type, mirroring how
+ * vanilla name tags draw their see-through part. Sneaking players always get
+ * hearts. Recent health drops blink exactly like the vanilla HUD does.
+ * Geometry is submitted in passes per texture (containers, health, blinking,
+ * absorption) because vanilla-texture mode binds individual files while
+ * pack mode draws sprite regions of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
 	/** Bundled-file textures that failed to load; those hearts fall back to atlas sprites. */
-	private static final Set<Identifier> unavailableVanillaTextures = new HashSet<>();
+	private static final Set<ResourceLocation> unavailableVanillaTextures = new HashSet<>();
 	/** Each skip reason is logged once so missing hearts can be diagnosed from the log. */
 	private static final Set<String> reportedSkips = new HashSet<>();
 	/**
@@ -98,9 +99,9 @@ public final class HeartsAboveHeadRenderer {
 		}
 		vanillaTexturesWarmed = true;
 		for (HeartType type : HeartType.values()) {
-			for (Identifier texture : type.fileTextures()) {
+			for (ResourceLocation texture : type.fileTextures()) {
 				try {
-					textureManager.registerAndLoad(texture, new NearestPixelTexture(texture));
+					textureManager.register(texture, new NearestPixelTexture(texture));
 				} catch (Exception e) {
 					unavailableVanillaTextures.add(texture);
 					LOGGER.warn("Failed to load bundled heart texture {}; falling back to atlas sprites", texture, e);
@@ -117,10 +118,10 @@ public final class HeartsAboveHeadRenderer {
 		atlasSprites.clear();
 	}
 
-	public static void render(AvatarRenderState state, HealthHolder health, PoseStack poseStack,
-			SubmitNodeCollector collector, CameraRenderState cameraState) {
+	public static void render(Player player, EntityRenderDispatcher dispatcher, PoseStack poseStack,
+			MultiBufferSource bufferSource, int packedLight) {
 		try {
-			renderHearts(state, health, poseStack, collector, cameraState);
+			renderHearts(player, dispatcher, poseStack, bufferSource, packedLight);
 		} catch (Throwable t) {
 			if (reportedFailures < MAX_REPORTED_FAILURES) {
 				reportedFailures++;
@@ -135,54 +136,60 @@ public final class HeartsAboveHeadRenderer {
 		}
 	}
 
-	private static void renderHearts(AvatarRenderState state, HealthHolder health, PoseStack poseStack,
-			SubmitNodeCollector collector, CameraRenderState cameraState) {
-		if (!HeartsPlusConfig.isEnabled() || state.isSpectator) {
+	private static void renderHearts(Player player, EntityRenderDispatcher dispatcher, PoseStack poseStack,
+			MultiBufferSource bufferSource, int packedLight) {
+		if (!HeartsPlusConfig.isEnabled() || player.isSpectator()) {
 			skipOnce("mod disabled or player is a spectator");
 			return;
 		}
-		if (health.heartsplus$isLocalPlayer() && !HeartsPlusConfig.isShowOwnHearts()) {
+		if (player == Minecraft.getInstance().player && !HeartsPlusConfig.isShowOwnHearts()) {
 			skipOnce("own player hidden (enable 'Show above yourself')");
 			return;
 		}
 		double maxDistance = HeartsPlusConfig.getRenderDistance();
-		if (state.distanceToCameraSq > maxDistance * maxDistance) {
+		if (dispatcher.distanceToSqr(player) > maxDistance * maxDistance) {
 			skipOnce("player beyond the render distance");
 			return;
 		}
-		if (state.isInvisibleToPlayer
-				&& !(HeartsPlusConfig.isShowInvisiblePlayers() && health.heartsplus$hasVisibleArmour())) {
+		if (player.isInvisible()
+				&& !(HeartsPlusConfig.isShowInvisiblePlayers() && hasVisibleArmour(player))) {
 			// Hidden by default; even when enabled, armour is the only thing
 			// that betrays an invisible player.
 			skipOnce("player is invisible");
 			return;
 		}
+		if (!((EntityRenderDispatcherMixin) dispatcher).heartsplus$shouldRenderShadow()) {
+			// Embedded entity previews (the inventory screen model) render
+			// through the same code path with shadows disabled; the heart bar
+			// is a world overlay and must not appear there.
+			skipOnce("embedded entity preview (shadows disabled)");
+			return;
+		}
 
-		HeartBarLayout layout = HeartBarLayout.of(health.heartsplus$getHealth(), health.heartsplus$getMaxHealth(),
-				health.heartsplus$getAbsorption(), health.heartsplus$getBlinkOldHealth());
+		float health = player.getHealth();
+		PlayerBlinkTracker.BlinkState blink = PlayerBlinkTracker.stateFor(player.getUUID());
+		blink.update(health, player.tickCount);
+		HeartBarLayout layout = HeartBarLayout.of(health, player.getMaxHealth(), player.getAbsorptionAmount(),
+				blink.oldHealth());
 		if (layout.heartsTotal() <= 0) {
 			// Degenerate health values — nothing to draw, skip all geometry work.
 			return;
 		}
-		Minecraft minecraft = Minecraft.getInstance();
-		AtlasManager atlasManager = minecraft.getAtlasManager();
-		HeartType family = HeartType.forStatus(health.heartsplus$isPoisoned(), health.heartsplus$isWithered(),
-				health.heartsplus$isFrozen());
-		ResolvedSprite container = resolve(HeartType.CONTAINER, false, false, atlasManager);
+		GuiSpriteManager spriteManager = Minecraft.getInstance().getGuiSprites();
+		HeartType family = HeartType.forStatus(player.hasEffect(MobEffects.POISON),
+				player.hasEffect(MobEffects.WITHER), player.isFullyFrozen());
+		ResolvedSprite container = resolve(HeartType.CONTAINER, false, false, spriteManager);
 
 		poseStack.pushPose();
 		poseStack.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
-		// rotateAround(..., 0, 0, 0) equals a plain rotation and avoids the
-		// per-frame quaternion allocation a mulPose copy would need.
-		poseStack.rotateAround(cameraState.orientation, 0.0F, 0.0F, 0.0F);
+		// The vanilla name tag recipe: billboard the bar towards the camera.
+		poseStack.mulPose(dispatcher.cameraOrientation());
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		poseStack.scale(pixelScale, -pixelScale, pixelScale);
 		poseStack.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
 
-		int light = state.lightCoords;
 		int blinkFrom = layout.heartsRed();
-		int blinkTo = layout.blinkUpperBound((int) Math.floor(state.ageInTicks), health.heartsplus$getBlinkEndTick(),
-				health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth());
+		int blinkTo = layout.blinkUpperBound(player.tickCount, blink.endTick(), blink.oldHealth(), health);
 
 		// Sprites are resolved lazily per pass so empty passes (no blinking, no
 		// absorption) cost nothing at all. Each family sits on its own z layer:
@@ -195,54 +202,54 @@ public final class HeartsAboveHeadRenderer {
 		final float familyHalfBlinkingZ = 4 * LAYER_Z_STEP;
 		final float absorbingFullZ = 5 * LAYER_Z_STEP;
 		final float absorbingHalfZ = 6 * LAYER_Z_STEP;
-		submitPass(collector, poseStack, container, containerZ, (pose, vertices) -> {
+		submitPass(bufferSource, poseStack, container, containerZ, packedLight, (vertices, matrix) -> {
 			for (int heart = 0; heart < layout.heartsTotal(); heart++) {
-				emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), container, light, containerZ);
+				emitHeart(vertices, matrix, layout.x(heart), layout.yTop(heart), container, packedLight, containerZ);
 			}
 		});
 		if (layout.heartsRed() > 0) {
-			ResolvedSprite familyFull = resolve(family, false, false, atlasManager);
-			submitPass(collector, poseStack, familyFull, familyFullZ, (pose, vertices) -> {
+			ResolvedSprite familyFull = resolve(family, false, false, spriteManager);
+			submitPass(bufferSource, poseStack, familyFull, familyFullZ, packedLight, (vertices, matrix) -> {
 				for (int heart = 0; heart < layout.heartsRed(); heart++) {
 					if (!layout.isRedHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFull, light, familyFullZ);
+						emitHeart(vertices, matrix, layout.x(heart), layout.yTop(heart), familyFull, packedLight, familyFullZ);
 					}
 				}
 			});
 			if (layout.hasRedHalf()) {
-				ResolvedSprite familyHalf = resolve(family, true, false, atlasManager);
-				submitPass(collector, poseStack, familyHalf, familyHalfZ, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light, familyHalfZ));
+				ResolvedSprite familyHalf = resolve(family, true, false, spriteManager);
+				submitPass(bufferSource, poseStack, familyHalf, familyHalfZ, packedLight, (vertices, matrix) ->
+						emitHeart(vertices, matrix, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, packedLight, familyHalfZ));
 			}
 		}
 		if (blinkTo > blinkFrom) {
-			ResolvedSprite familyFullBlinking = resolve(family, false, true, atlasManager);
-			submitPass(collector, poseStack, familyFullBlinking, familyFullBlinkingZ, (pose, vertices) -> {
+			ResolvedSprite familyFullBlinking = resolve(family, false, true, spriteManager);
+			submitPass(bufferSource, poseStack, familyFullBlinking, familyFullBlinkingZ, packedLight, (vertices, matrix) -> {
 				for (int heart = blinkFrom; heart < blinkTo; heart++) {
 					if (heart != blinkTo - 1 || !layout.lastBlinkHalf()) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFullBlinking, light, familyFullBlinkingZ);
+						emitHeart(vertices, matrix, layout.x(heart), layout.yTop(heart), familyFullBlinking, packedLight, familyFullBlinkingZ);
 					}
 				}
 			});
 			if (layout.lastBlinkHalf()) {
-				ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
-				submitPass(collector, poseStack, familyHalfBlinking, familyHalfBlinkingZ, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light, familyHalfBlinkingZ));
+				ResolvedSprite familyHalfBlinking = resolve(family, true, true, spriteManager);
+				submitPass(bufferSource, poseStack, familyHalfBlinking, familyHalfBlinkingZ, packedLight, (vertices, matrix) ->
+						emitHeart(vertices, matrix, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, packedLight, familyHalfBlinkingZ));
 			}
 		}
 		if (layout.heartsTotal() > layout.heartsNormal()) {
-			ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, false, atlasManager);
-			submitPass(collector, poseStack, absorbingFull, absorbingFullZ, (pose, vertices) -> {
+			ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, false, spriteManager);
+			submitPass(bufferSource, poseStack, absorbingFull, absorbingFullZ, packedLight, (vertices, matrix) -> {
 				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
 					if (!layout.isYellowHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light, absorbingFullZ);
+						emitHeart(vertices, matrix, layout.x(heart), layout.yTop(heart), absorbingFull, packedLight, absorbingFullZ);
 					}
 				}
 			});
 			if (layout.hasYellowHalf()) {
-				ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, false, atlasManager);
-				submitPass(collector, poseStack, absorbingHalf, absorbingHalfZ, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light, absorbingHalfZ));
+				ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, false, spriteManager);
+				submitPass(bufferSource, poseStack, absorbingHalf, absorbingHalfZ, packedLight, (vertices, matrix) ->
+						emitHeart(vertices, matrix, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, packedLight, absorbingHalfZ));
 			}
 		}
 
@@ -263,12 +270,20 @@ public final class HeartsAboveHeadRenderer {
 		}
 	}
 
-	private static ResolvedSprite resolve(HeartType type, boolean half, boolean blinking, AtlasManager atlasManager) {
+	private static boolean hasVisibleArmour(Player player) {
+		return !player.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+				|| !player.getItemBySlot(EquipmentSlot.CHEST).isEmpty()
+				|| !player.getItemBySlot(EquipmentSlot.LEGS).isEmpty()
+				|| !player.getItemBySlot(EquipmentSlot.FEET).isEmpty();
+	}
+
+	private static ResolvedSprite resolve(HeartType type, boolean half, boolean blinking,
+			GuiSpriteManager spriteManager) {
 		// The warm-up gate keeps the first frames after enabling the option on
 		// the atlas: bundled textures are registered from a client tick, and a
 		// mid-frame first upload would leave them blank until F3+T.
 		if (HeartsPlusConfig.isVanillaTextures() && vanillaTexturesWarmed) {
-			Identifier file = blinking
+			ResourceLocation file = blinking
 					? half ? type.fileHalfBlinking : type.fileFullBlinking
 					: half ? type.fileHalf : type.fileFull;
 			if (!unavailableVanillaTextures.contains(file)) {
@@ -277,12 +292,13 @@ public final class HeartsAboveHeadRenderer {
 						() -> new ResolvedSprite(file, 0.0F, 0.0F, 1.0F, 1.0F));
 			}
 		}
-		Identifier spriteId = blinking
+		ResourceLocation spriteId = blinking
 				? half ? type.atlasHalfBlinking : type.atlasFullBlinking
 				: half ? type.atlasHalf : type.atlasFull;
 		return cachedSprite(atlasSprites, type, half, blinking, () -> {
-			TextureAtlasSprite sprite = atlasManager.get(new Material(Sheets.GUI_SHEET, spriteId));
-			return new ResolvedSprite(sprite.atlasLocation(), sprite.getU0(), sprite.getV0(), sprite.getU1(), sprite.getV1());
+			TextureAtlasSprite sprite = spriteManager.getSprite(spriteId);
+			return new ResolvedSprite(sprite.atlasLocation(), sprite.getU0(), sprite.getV0(),
+					sprite.getU1(), sprite.getV1());
 		});
 	}
 
@@ -303,54 +319,57 @@ public final class HeartsAboveHeadRenderer {
 		return sprite;
 	}
 
-	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite, float z,
-			SubmitNodeCollector.CustomGeometryRenderer renderer) {
-		// Mirrors vanilla nameplates: the normal layer is occluded by walls,
-		// the see-through layer shows dimly through them. The extra pass is
-		// submitted only when the option is on, so the default path stays
-		// untouched.
-		collector.submitCustomGeometry(poseStack, RenderTypes.text(sprite.texture()), renderer);
+	private static void submitPass(MultiBufferSource bufferSource, PoseStack poseStack,
+			ResolvedSprite sprite, float z, int packedLight, PassGeometry geometry) {
+		Matrix4f matrix = poseStack.last().pose();
+		VertexConsumer vertices = bufferSource.getBuffer(RenderType.text(sprite.texture()));
+		geometry.emit(vertices, matrix);
 		if (HeartsPlusConfig.isShowBehindBlocks()) {
-			collector.submitCustomGeometry(poseStack, RenderTypes.textSeeThrough(sprite.texture()), renderer);
+			// Same geometry again without a depth test, so it stays visible
+			// through walls — exactly how vanilla name tags submit their
+			// see-through part alongside the depth-tested one. Submitted only
+			// when the option is on, so the default path stays untouched.
+			VertexConsumer seeThrough = bufferSource.getBuffer(RenderType.textSeeThrough(sprite.texture()));
+			geometry.emit(seeThrough, matrix);
 		}
+	}
+
+	/** One emitted quad set for a single texture pass. */
+	private interface PassGeometry {
+		void emit(VertexConsumer vertices, Matrix4f matrix);
 	}
 
 	/**
 	 * A bundled texture registered with NEAREST magnification and
-	 * minification (no mipmaps): the 9x9 pixel art must stay crisp, while the
-	 * metadata-less default can resolve to a linear sampler.
+	 * minification (no mipmaps): the 9x9 pixel art must stay crisp, while
+	 * vanilla leaves freshly loaded textures on the linear GL defaults.
 	 */
 	private static final class NearestPixelTexture extends SimpleTexture {
-		private NearestPixelTexture(Identifier location) {
+		private NearestPixelTexture(ResourceLocation location) {
 			super(location);
 		}
 
 		@Override
-		public void apply(TextureContents contents) {
-			super.apply(contents);
-			this.sampler = RenderSystem.getSamplerCache().getSampler(
-					AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.NEAREST, FilterMode.NEAREST, false);
+		public void load(net.minecraft.server.packs.resources.ResourceManager resourceManager) throws IOException {
+			super.load(resourceManager);
+			this.setFilter(false, false);
 		}
 	}
 
-	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
+	private record ResolvedSprite(ResourceLocation texture, float u0, float v0, float u1, float v1) {
 	}
 
-	private static void emitHeart(PoseStack.Pose pose, VertexConsumer vertices, float x, float yTop,
-			ResolvedSprite sprite, int light, float z) {
+	private static void emitHeart(VertexConsumer vertices, Matrix4f matrix, float x, float yTop,
+			ResolvedSprite sprite, int packedLight, float z) {
 		float endX = x + HeartBarLayout.HEART_SIZE;
 		float endY = yTop + HeartBarLayout.HEART_SIZE;
-		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
+		// The world-text vertex format is POSITION_COLOR_TEX_LIGHTMAP; every
 		// element must be set or the BufferBuilder validation rejects the vertex.
 		// The pipeline culls back faces, so the winding must match vanilla text
-		// quads (BakedSheetGlyph): top-left, bottom-left, bottom-right, top-right.
-		vertices.addVertex(pose, x, yTop, z).setUv(sprite.u0(), sprite.v0())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, x, endY, z).setUv(sprite.u0(), sprite.v1())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, endY, z).setUv(sprite.u1(), sprite.v1())
-				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, yTop, z).setUv(sprite.u1(), sprite.v0())
-				.setLight(light).setColor(255, 255, 255, 255);
+		// quads (GlyphRenderTypes): top-left, bottom-left, bottom-right, top-right.
+		vertices.addVertex(matrix, x, yTop, z).setColor(255, 255, 255, 255).setUv(sprite.u0(), sprite.v0()).setLight(packedLight);
+		vertices.addVertex(matrix, x, endY, z).setColor(255, 255, 255, 255).setUv(sprite.u0(), sprite.v1()).setLight(packedLight);
+		vertices.addVertex(matrix, endX, endY, z).setColor(255, 255, 255, 255).setUv(sprite.u1(), sprite.v1()).setLight(packedLight);
+		vertices.addVertex(matrix, endX, yTop, z).setColor(255, 255, 255, 255).setUv(sprite.u1(), sprite.v0()).setLight(packedLight);
 	}
 }
