@@ -13,7 +13,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 A lightweight, fully configurable client-side mod for Minecraft.<br/>
-Fabric **26.1 – 26.3**, NeoForge **26.x**, and a Fabric **1.21.11** legacy build.<br/>
+Fabric and NeoForge for **26.1 – 26.3**, plus Fabric and NeoForge builds for **1.21.11**.<br/>
 Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 
 </div>
@@ -54,8 +54,8 @@ releases link straight to the Modrinth download pages.
 
 ## Configuration
 
-Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press the settings
-keybind (unbound by default). On NeoForge, use the keybind.
+Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press **H** anywhere
+(no menu needed on NeoForge).
 
 | Option | Default | Description |
 |---|:---:|---|
@@ -65,7 +65,7 @@ keybind (unbound by default). On NeoForge, use the keybind.
 | Show Sneaking Players | OFF | Off = sneaking players get no hearts, just like their hidden name tag |
 | Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
-| Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
+| Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
 | Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
@@ -74,8 +74,8 @@ Settings persist to `config/heartsplus.json` and apply instantly.
 
 | Key | Default | Action |
 |---|:---:|---|
-| Toggle Health Indicators | **H** | Quick on/off with an action-bar confirmation |
-| Open HeartsPlus Settings | *unbound* | Open the config screen |
+| Toggle Health Indicators | *unbound* | Quick on/off with an action-bar confirmation |
+| Open HeartsPlus Settings | **H** | Open the config screen |
 
 ## Building from source
 
@@ -95,6 +95,7 @@ creates a GitHub release linking to the Modrinth downloads.
 |---|---|---|---|
 | `main` | Fabric | 26.1 – 26.3 | actively developed |
 | `neoforge` | NeoForge | 26.1 – 26.3 | kept in sync with `main` |
+| `neoforge-1.21` | NeoForge | 1.21.11 | legacy line |
 | `1.21` | Fabric | 1.21.11 | legacy line |
 
 Older versions (1.20 – 1.21.10) and Forge are not planned — each Minecraft

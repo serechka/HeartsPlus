@@ -38,6 +38,11 @@ jobs:
             loader: neoforge
             gvs: '["26.1","26.2","26.3"]'
             deps: '[]'
+          - branch: neoforge-1.21
+            mc: "1.21.11"
+            loader: neoforge
+            gvs: '["1.21.11"]'
+            deps: '[]'
     steps:
       - name: Checkout ${{ matrix.branch }}
         uses: actions/checkout@v4
@@ -137,5 +142,6 @@ jobs:
             - [Fabric, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-fabric)
             - [Fabric, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-1.21.11-fabric)
             - [NeoForge, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-neoforge)
+            - [NeoForge, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-1.21.11-neoforge)
           generate_release_notes: false
           prerelease: true
