@@ -82,7 +82,7 @@ Settings persist to `config/heartsplus.json` and apply instantly.
 Requires **JDK 25** (e.g. [Temurin](https://adoptium.net/)):
 
 ```bash
-./gradlew build    # on the branch you want: main, neoforge or 1.21
+./gradlew build    # on the branch of the era you want to build
 ```
 
 The mod jar appears in `build/libs/`. CI builds every push; pushing a `v*` tag
@@ -97,14 +97,27 @@ then **F5** to see them above your head.
 <details>
 <summary>Supported versions and branches</summary>
 
-| Branch | Loader | Game versions | Status |
-|---|---|---|---|
-| `main` | Fabric | 26.1 – 26.3 | actively developed |
-| `neoforge` | NeoForge | 26.1 – 26.3 | kept in sync with `main` |
-| `neoforge-1.21` | NeoForge | 1.21.11 | legacy line |
-| `1.21` | Fabric | 1.21.11 | legacy line |
+One branch per rendering era — each branch ships one jar covering its
+whole range, on both loaders:
 
-Older versions (1.20 – 1.21.10) and Forge are not planned — each Minecraft
+| Branch | Loader | Game versions |
+|---|---|---|
+| `main` | Fabric | 26.1 – 26.3 |
+| `neoforge` | NeoForge | 26.1 – 26.3 |
+| `1.21` | Fabric | 1.21.11 |
+| `neoforge-1.21` | NeoForge | 1.21.11 |
+| `1.21.9` | Fabric | 1.21.9 – 1.21.10 |
+| `neoforge-1.21.9` | NeoForge | 1.21.9 – 1.21.10 |
+| `1.21.6` | Fabric | 1.21.6 – 1.21.8 |
+| `neoforge-1.21.6` | NeoForge | 1.21.6 – 1.21.8 |
+| `1.21.2` | Fabric | 1.21.2 – 1.21.3 |
+| `neoforge-1.21.2` | NeoForge | 1.21.2 – 1.21.3 |
+| `1.21.4` | Fabric | 1.21.4 – 1.21.5 |
+| `neoforge-1.21.4` | NeoForge | 1.21.4 – 1.21.5 |
+| `1.21.0` | Fabric | 1.21 – 1.21.1 |
+| `neoforge-1.21.0` | NeoForge | 1.21 – 1.21.1 |
+
+Forge is not planned (replaced by NeoForge for 1.21+) — each Minecraft
 rendering era needs its own port.
 
 </details>
