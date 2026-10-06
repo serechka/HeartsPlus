@@ -3,11 +3,10 @@ package com.heartsplus.render;
 import java.util.UUID;
 
 /**
- * Duck-typed interface injected onto the player render state
- * ({@code AvatarRenderState} in Mojang mappings) by mixin.
+ * Duck-typed interface injected onto {@code PlayerRenderState} by mixin.
  * The render state itself carries no health data, so EntityRendererMixin
  * fills these values while the render state is being extracted from the entity.
- * The damage-blink history lives in {@link BlinkTracker}, keyed by the
+ * The vanilla animation history lives in {@link BlinkTracker}, keyed by the
  * player's UUID so it survives render-state recycling.
  */
 public interface HealthHolder {
@@ -28,12 +27,19 @@ public interface HealthHolder {
 	/** True while the player wears any armour piece; armour betrays invisible players. */
 	boolean heartsplus$hasVisibleArmour();
 
-	/** Health the player had before the latest drop; hearts up to this value blink. */
-	float heartsplus$getBlinkOldHealth();
+	/** True while Regeneration runs; the bouncing heart follows it like the vanilla HUD. */
+	boolean heartsplus$isRegenerating();
 
-	/** Game tick until which the blink animation plays. */
-	int heartsplus$getBlinkEndTick();
+	/** Game tick the animation state was last advanced to. */
+	int heartsplus$getAnimationTick();
+
+	/** The lagging vanilla displayHealth copy, in half-hearts. */
+	int heartsplus$getDisplayHealth();
+
+	/** True on the on-frames of the vanilla blink flash for the current tick. */
+	boolean heartsplus$isBlinking();
 
 	void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour, int tick);
+			boolean poisoned, boolean withered, boolean frozen, boolean regenerating, boolean hasVisibleArmour,
+			int tick, boolean invulnerable);
 }
