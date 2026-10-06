@@ -74,12 +74,12 @@ public class HeartsPlusClient {
 		@SubscribeEvent
 		public void onClientTick(ClientTickEvent.Post event) {
 			Minecraft client = Minecraft.getInstance();
-			// Bundled heart textures are only needed in vanilla-texture mode.
-			// Registration must happen outside a frame (lazy mid-frame uploads
-			// stay blank), so it runs from the first tick with the mode enabled;
-			// the call itself no-ops once warmed.
+			// Default-pack heart textures are only needed in default-texture
+			// mode. Registration must happen outside a frame (lazy mid-frame
+			// uploads stay blank), so it runs from the first tick with the mode
+			// enabled; the call itself no-ops once warmed.
 			if (HeartsPlusConfig.isVanillaTextures()) {
-				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
+				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager(), client.getResourceManager());
 			}
 			while (toggleRenderingKey.consumeClick()) {
 				HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());

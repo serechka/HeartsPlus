@@ -41,26 +41,28 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(right, y + ROW_STEP, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 		addRenderableWidget(CycleButton.builder(
 						(Boolean value) -> value
-								? Component.translatable("option.heartsplus.textures.vanilla")
+								? Component.translatable("option.heartsplus.textures.default")
 								: Component.translatable("option.heartsplus.textures.pack"))
 				.withInitialValue(HeartsPlusConfig.isVanillaTextures())
-				.create(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
+				.create(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.default_textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
+		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
+				HeartsPlusConfig::setBlinkAnimation);
 
-		addRenderableWidget(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
+		addRenderableWidget(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
 				HeartsPlusConfig.getScale(), HeartsPlusConfig::setScaleSilently,
 				v -> Component.translatable("heartsplus.config.scale", String.format(Locale.ROOT, "%.2f", v))));
-		addRenderableWidget(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
+		addRenderableWidget(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
 				HeartsPlusConfig.getRenderDistance(), HeartsPlusConfig::setRenderDistanceSilently,
 				v -> Component.translatable("heartsplus.config.render_distance", String.format(Locale.ROOT, "%.0f", v))));
-		addRenderableWidget(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+		addRenderableWidget(slider(left, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
 				HeartsPlusConfig.getHeartOffset(), v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
 				v -> Component.translatable("heartsplus.config.heart_offset", String.format(Locale.ROOT, "%.0f", v))));
 
 		addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose())
-				.bounds(centerX - WIDGET_WIDTH - 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.bounds(centerX - WIDGET_WIDTH - 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 		addRenderableWidget(Button.builder(Component.translatable("heartsplus.config.reset"), button -> resetAndRebuild())
-				.bounds(centerX + 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.bounds(centerX + 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 	}
 
 	@Override
