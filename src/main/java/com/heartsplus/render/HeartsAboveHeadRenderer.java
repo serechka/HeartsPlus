@@ -2,16 +2,13 @@ package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
 import com.heartsplus.HeartsPlusLog;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.AddressMode;
-import com.mojang.blaze3d.textures.FilterMode;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayers;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
@@ -25,7 +22,7 @@ import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
-import org.joml.Matrix4fc;
+import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
 /**
@@ -314,20 +311,23 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void submitPass(OrderedRenderCommandQueue queue, MatrixStack matrices, ResolvedSprite sprite, float z,
 			OrderedRenderCommandQueue.Custom renderer) {
-		queue.submitCustom(matrices, RenderLayers.text(sprite.texture()), renderer);
+		// 1.21.9 keeps the per-texture world-text layers on RenderLayer itself;
+		// the RenderLayers.text helper overloads only appear in 1.21.10+.
+		queue.submitCustom(matrices, RenderLayer.getText(sprite.texture()), renderer);
 		if (HeartsPlusConfig.isShowBehindBlocks()) {
 			// Same geometry again without a depth test, so it stays visible
 			// through walls — exactly how vanilla name tags submit their
 			// see-through part alongside the depth-tested one. Submitted only
 			// when the option is on, so the default path stays untouched.
-			queue.submitCustom(matrices, RenderLayers.textSeeThrough(sprite.texture()), renderer);
+			queue.submitCustom(matrices, RenderLayer.getTextSeeThrough(sprite.texture()), renderer);
 		}
 	}
 
 	/**
-	 * A bundled texture registered with NEAREST magnification and
-	 * minification (no mipmaps): the 9x9 pixel art must stay crisp, while the
-	 * metadata-less default can resolve to a linear sampler.
+	 * A bundled texture with forced NEAREST magnification and minification
+	 * (no mipmaps): the 9x9 pixel art must stay crisp regardless of the
+	 * texture metadata. Applied after the reload so the GPU texture exists —
+	 * 1.21.9 configures filtering directly on the texture, not via a sampler.
 	 */
 	private static final class NearestPixelTexture extends ResourceTexture {
 		private NearestPixelTexture(Identifier location) {
@@ -337,15 +337,14 @@ public final class HeartsAboveHeadRenderer {
 		@Override
 		public void reload(TextureContents contents) {
 			super.reload(contents);
-			this.sampler = RenderSystem.getSamplerCache().get(
-					AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.NEAREST, FilterMode.NEAREST, false);
+			this.setFilter(false, false);
 		}
 	}
 
 	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
 	}
 
-	private static void emitHeart(VertexConsumer vertices, Matrix4fc matrix, float x, float yTop,
+	private static void emitHeart(VertexConsumer vertices, Matrix4f matrix, float x, float yTop,
 			ResolvedSprite sprite, int light, float z) {
 		float endX = x + HeartBarLayout.HEART_SIZE;
 		float endY = yTop + HeartBarLayout.HEART_SIZE;
