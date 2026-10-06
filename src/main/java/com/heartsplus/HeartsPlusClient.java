@@ -26,9 +26,9 @@ public class HeartsPlusClient implements ClientModInitializer {
 		KeyBinding.Category category = KeyBinding.Category.create(
 				Identifier.of(HeartsPlus.MOD_ID, "main"));
 		toggleRenderingKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.heartsplus.toggle", GLFW.GLFW_KEY_H, category));
+				"key.heartsplus.toggle", GLFW.GLFW_KEY_UNKNOWN, category));
 		openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.heartsplus.settings", GLFW.GLFW_KEY_UNKNOWN, category));
+				"key.heartsplus.settings", GLFW.GLFW_KEY_H, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// First tick: register and upload the bundled heart textures before
