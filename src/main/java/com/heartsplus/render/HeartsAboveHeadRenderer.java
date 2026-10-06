@@ -2,6 +2,9 @@ package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
 import com.heartsplus.HeartsPlusLog;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.EnumMap;
@@ -16,7 +19,9 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.texture.TextureContents;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.client.resources.model.sprite.SpriteId;
@@ -31,13 +36,16 @@ import org.slf4j.Logger;
  *
  * <p>Hearts are drawn with the world-text render type, which — like name
  * tags — is shaded only by the lightmap, so they look identical from every
- * viewing angle. Hearts are occluded by walls like normal geometry;
- * a dim see-through variant is planned but needs a custom pipeline.
- * Sneaking players get no hearts at all, matching how vanilla hides their
- * name tag. Recent health drops blink exactly like the vanilla HUD does.
- * Geometry is submitted in passes per texture
- * (containers, health, blinking, absorption) because vanilla-texture mode
- * binds individual files instead of the shared GUI atlas.</p>
+ * viewing angle. The anchor height is a fixed constant so the bar never
+ * jumps with pose changes. Each sprite family is emitted on its own z layer
+ * (containers deepest, overlays closest) so the depth test cannot hide the
+ * health hearts behind their containers. When "show behind blocks" is on,
+ * every pass is submitted a second time with the see-through text render
+ * type, mirroring how vanilla name tags draw their see-through part.
+ * Sneaking players always get hearts. Geometry is submitted in passes per
+ * texture (containers, health, blinking, absorption) because
+ * vanilla-texture mode binds individual files instead of the shared GUI
+ * atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -62,10 +70,15 @@ public final class HeartsAboveHeadRenderer {
 	private static int reportedFailures;
 	private static int suppressedFailures;
 
-	/** One nameplate text row in world units; must track vanilla EntityRenderer.submitNameDisplay. */
-	private static final float NAMETAG_ROW_HEIGHT = 9.0F * 1.15F * 0.025F;
-	/** Small breathing room between the nameplate and the bottom heart row, in world units. */
-	private static final float NAMEPLATE_GAP = 2.0F * 0.025F;
+	/**
+	 * Fixed height above the entity origin where the heart bar sits — player
+	 * height (1.8) plus the vanilla name tag pad (0.5). Deliberately not
+	 * derived from nameTagAttachment/boundingBoxHeight: those sag in the sneak
+	 * pose with interpolation lag, which made the hearts jump.
+	 */
+	private static final float HEART_ANCHOR_HEIGHT = 2.3F;
+	/** Z offset between consecutive sprite layers, in quad pixel units (before scale). */
+	private static final float LAYER_Z_STEP = 0.01F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 
 	private HeartsAboveHeadRenderer() {
@@ -76,6 +89,8 @@ public final class HeartsAboveHeadRenderer {
 	 * frame needs them. Lazy registration from inside render submission
 	 * produces textures that are never actually uploaded, which makes the
 	 * hearts invisible, so warm-up is done from the first client tick.
+	 * Textures are registered with forced NEAREST filtering: they are 9x9
+	 * pixel art and must stay crisp at any scale.
 	 */
 	public static void warmUpVanillaTextures(TextureManager textureManager) {
 		if (vanillaTexturesWarmed) {
@@ -85,7 +100,7 @@ public final class HeartsAboveHeadRenderer {
 		for (HeartType type : HeartType.values()) {
 			for (Identifier texture : type.fileTextures()) {
 				try {
-					textureManager.getTexture(texture);
+					textureManager.registerAndLoad(texture, new NearestPixelTexture(texture));
 				} catch (Exception e) {
 					unavailableVanillaTextures.add(texture);
 					LOGGER.warn("Failed to load bundled heart texture {}; falling back to atlas sprites", texture, e);
@@ -142,10 +157,6 @@ public final class HeartsAboveHeadRenderer {
 			skipOnce("player is invisible");
 			return;
 		}
-		if (!HeartsPlusConfig.isShowSneakingPlayers() && state.isCrouching) {
-			skipOnce("player is sneaking");
-			return;
-		}
 
 		HeartBarLayout layout = HeartBarLayout.of(health.heartsplus$getHealth(), health.heartsplus$getMaxHealth(),
 				health.heartsplus$getAbsorption(), health.heartsplus$getBlinkOldHealth());
@@ -159,7 +170,7 @@ public final class HeartsAboveHeadRenderer {
 		ResolvedSprite container = resolve(HeartType.CONTAINER, false, false, atlasManager);
 
 		poseStack.pushPose();
-		poseStack.translate(0.0F, heartsY(state), 0.0F);
+		poseStack.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
 		// rotateAround(..., 0, 0, 0) equals a plain rotation; it is the only
 		// quaternion-rotation call shared by every supported game version.
 		poseStack.rotateAround(camera.orientation, 0.0F, 0.0F, 0.0F);
@@ -173,55 +184,64 @@ public final class HeartsAboveHeadRenderer {
 				health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth());
 
 		// Sprites are resolved lazily per pass so empty passes (no blinking, no
-		// absorption) cost nothing at all.
-		submitPass(collector, poseStack, container, (pose, vertices) -> {
+		// absorption) cost nothing at all. Each family sits on its own z layer:
+		// containers deepest, then health, blinking and absorption overlays —
+		// without the offsets the depth test z-fights the quads apart.
+		final float containerZ = 0.0F;
+		final float familyFullZ = LAYER_Z_STEP;
+		final float familyHalfZ = 2 * LAYER_Z_STEP;
+		final float familyFullBlinkingZ = 3 * LAYER_Z_STEP;
+		final float familyHalfBlinkingZ = 4 * LAYER_Z_STEP;
+		final float absorbingFullZ = 5 * LAYER_Z_STEP;
+		final float absorbingHalfZ = 6 * LAYER_Z_STEP;
+		submitPass(collector, poseStack, container, containerZ, (pose, vertices) -> {
 			for (int heart = 0; heart < layout.heartsTotal(); heart++) {
-				emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), container, light);
+				emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), container, light, containerZ);
 			}
 		});
 		if (layout.heartsRed() > 0) {
 			ResolvedSprite familyFull = resolve(family, false, false, atlasManager);
-			submitPass(collector, poseStack, familyFull, (pose, vertices) -> {
+			submitPass(collector, poseStack, familyFull, familyFullZ, (pose, vertices) -> {
 				for (int heart = 0; heart < layout.heartsRed(); heart++) {
 					if (!layout.isRedHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFull, light);
+						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFull, light, familyFullZ);
 					}
 				}
 			});
 			if (layout.hasRedHalf()) {
 				ResolvedSprite familyHalf = resolve(family, true, false, atlasManager);
-				submitPass(collector, poseStack, familyHalf, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light));
+				submitPass(collector, poseStack, familyHalf, familyHalfZ, (pose, vertices) ->
+						emitHeart(pose, vertices, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, light, familyHalfZ));
 			}
 		}
 		if (blinkTo > blinkFrom) {
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, atlasManager);
-			submitPass(collector, poseStack, familyFullBlinking, (pose, vertices) -> {
+			submitPass(collector, poseStack, familyFullBlinking, familyFullBlinkingZ, (pose, vertices) -> {
 				for (int heart = blinkFrom; heart < blinkTo; heart++) {
 					if (heart != blinkTo - 1 || !layout.lastBlinkHalf()) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFullBlinking, light);
+						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), familyFullBlinking, light, familyFullBlinkingZ);
 					}
 				}
 			});
 			if (layout.lastBlinkHalf()) {
 				ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
-				submitPass(collector, poseStack, familyHalfBlinking, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light));
+				submitPass(collector, poseStack, familyHalfBlinking, familyHalfBlinkingZ, (pose, vertices) ->
+						emitHeart(pose, vertices, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light, familyHalfBlinkingZ));
 			}
 		}
 		if (layout.heartsTotal() > layout.heartsNormal()) {
 			ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, false, atlasManager);
-			submitPass(collector, poseStack, absorbingFull, (pose, vertices) -> {
+			submitPass(collector, poseStack, absorbingFull, absorbingFullZ, (pose, vertices) -> {
 				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
 					if (!layout.isYellowHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light);
+						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light, absorbingFullZ);
 					}
 				}
 			});
 			if (layout.hasYellowHalf()) {
 				ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, false, atlasManager);
-				submitPass(collector, poseStack, absorbingHalf, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light));
+				submitPass(collector, poseStack, absorbingHalf, absorbingHalfZ, (pose, vertices) ->
+						emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light, absorbingHalfZ));
 			}
 		}
 
@@ -235,9 +255,9 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void skipOnce(String reason) {
 		if (reportedSkips.add(reason)) {
-			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showSneaking={}, vanillaTextures={}, scale={}, renderDistance={}]",
+			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showBehindBlocks={}, vanillaTextures={}, scale={}, renderDistance={}]",
 					reason, HeartsPlusConfig.isEnabled(), HeartsPlusConfig.isShowOwnHearts(),
-					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowSneakingPlayers(),
+					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowBehindBlocks(),
 					HeartsPlusConfig.isVanillaTextures(), HeartsPlusConfig.getScale(), HeartsPlusConfig.getRenderDistance());
 		}
 	}
@@ -282,48 +302,54 @@ public final class HeartsAboveHeadRenderer {
 		return sprite;
 	}
 
-	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite,
+	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite, float z,
 			SubmitNodeCollector.CustomGeometryRenderer renderer) {
-		// NOTE: the see-through text pipeline is GUI-oriented in 26.x and
-		// breaks the whole custom-geometry phase when submitted here, so the
-		// wall-transparent variant is intentionally not drawn for now.
 		collector.submitCustomGeometry(poseStack, RenderTypes.text(sprite.texture()), renderer);
+		if (HeartsPlusConfig.isShowBehindBlocks()) {
+			// Same geometry again without a depth test, so it stays visible
+			// through walls — exactly how vanilla name tags submit their
+			// see-through part alongside the depth-tested one. Submitted only
+			// when the option is on, so the default path stays untouched.
+			collector.submitCustomGeometry(poseStack, RenderTypes.textSeeThrough(sprite.texture()), renderer);
+		}
 	}
 
 	/**
-	 * Height above the entity origin, sitting on top of the nameplate
-	 * when one is displayed, mirroring vanilla name tag placement.
-	 * The +0.5F pad matches the nameplate attachment lift vanilla applies.
+	 * A bundled texture registered with NEAREST magnification and
+	 * minification (no mipmaps): the 9x9 pixel art must stay crisp, while the
+	 * metadata-less default can resolve to a linear sampler.
 	 */
-	private static float heartsY(AvatarRenderState state) {
-		if (state.nameTag != null && state.nameTagAttachment != null) {
-			float y = (float) state.nameTagAttachment.y + 0.5F + NAMETAG_ROW_HEIGHT + NAMEPLATE_GAP;
-			if (state.scoreText != null) {
-				y += NAMETAG_ROW_HEIGHT;
-			}
-			return y;
+	private static final class NearestPixelTexture extends SimpleTexture {
+		private NearestPixelTexture(Identifier location) {
+			super(location);
 		}
-		return state.boundingBoxHeight + 0.5F + NAMEPLATE_GAP;
+
+		@Override
+		public void apply(TextureContents contents) {
+			super.apply(contents);
+			this.sampler = RenderSystem.getSamplerCache().getSampler(
+					AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.NEAREST, FilterMode.NEAREST, false);
+		}
 	}
 
 	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
 	}
 
 	private static void emitHeart(PoseStack.Pose pose, VertexConsumer vertices, float x, float yTop,
-			ResolvedSprite sprite, int light) {
+			ResolvedSprite sprite, int light, float z) {
 		float endX = x + HeartBarLayout.HEART_SIZE;
 		float endY = yTop + HeartBarLayout.HEART_SIZE;
 		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
 		// element must be set or the BufferBuilder validation rejects the vertex.
 		// The pipeline culls back faces, so the winding must match vanilla text
 		// quads (BakedSheetGlyph): top-left, bottom-left, bottom-right, top-right.
-		vertices.addVertex(pose, x, yTop, 0.0F).setUv(sprite.u0(), sprite.v0())
+		vertices.addVertex(pose, x, yTop, z).setUv(sprite.u0(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
+		vertices.addVertex(pose, x, endY, z).setUv(sprite.u0(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, endY, 0.0F).setUv(sprite.u1(), sprite.v1())
+		vertices.addVertex(pose, endX, endY, z).setUv(sprite.u1(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
+		vertices.addVertex(pose, endX, yTop, z).setUv(sprite.u1(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
 	}
 }
