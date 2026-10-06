@@ -43,27 +43,29 @@ public class HeartsPlusConfigScreen extends Screen {
 		// line, so the textures toggle uses the generic builder.
 		addDrawableChild(CyclingButtonWidget.<Boolean>builder(
 				value -> value
-						? Text.translatable("option.heartsplus.textures.vanilla")
+						? Text.translatable("option.heartsplus.textures.default")
 						: Text.translatable("option.heartsplus.textures.pack"))
 				.initially(HeartsPlusConfig.isVanillaTextures())
 				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT,
-						Text.translatable("heartsplus.config.textures"),
+						Text.translatable("heartsplus.config.default_textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
+		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
+				HeartsPlusConfig::setBlinkAnimation);
 
-		addDrawableChild(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
+		addDrawableChild(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
 				HeartsPlusConfig.getScale(), HeartsPlusConfig::setScaleSilently,
 				v -> Text.translatable("heartsplus.config.scale", String.format(Locale.ROOT, "%.2f", v))));
-		addDrawableChild(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
+		addDrawableChild(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
 				HeartsPlusConfig.getRenderDistance(), HeartsPlusConfig::setRenderDistanceSilently,
 				v -> Text.translatable("heartsplus.config.render_distance", String.format(Locale.ROOT, "%.0f", v))));
-		addDrawableChild(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+		addDrawableChild(slider(left, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
 				HeartsPlusConfig.getHeartOffset(), v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
 				v -> Text.translatable("heartsplus.config.heart_offset", String.format(Locale.ROOT, "%.0f", v))));
 
 		addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), button -> close())
-				.dimensions(centerX - WIDGET_WIDTH - 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.dimensions(centerX - WIDGET_WIDTH - 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 		addDrawableChild(ButtonWidget.builder(Text.translatable("heartsplus.config.reset"), button -> resetAndRebuild())
-				.dimensions(centerX + 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.dimensions(centerX + 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 	}
 
 	@Override
