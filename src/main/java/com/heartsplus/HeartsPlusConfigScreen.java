@@ -39,11 +39,15 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
 		addToggle(right, y + ROW_STEP, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
-		addDrawableChild(CyclingButtonWidget.onOffBuilder(
-				Text.translatable("option.heartsplus.textures.vanilla"),
-				Text.translatable("option.heartsplus.textures.pack"),
-				HeartsPlusConfig.isVanillaTextures())
-				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable("heartsplus.config.textures"),
+		// The (Text, Text, initial) onOffBuilder overload post-dates this
+		// line, so the textures toggle uses the generic builder.
+		addDrawableChild(CyclingButtonWidget.<Boolean>builder(
+				value -> value
+						? Text.translatable("option.heartsplus.textures.vanilla")
+						: Text.translatable("option.heartsplus.textures.pack"))
+				.initially(HeartsPlusConfig.isVanillaTextures())
+				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT,
+						Text.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
 
 		addDrawableChild(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
