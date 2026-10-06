@@ -105,9 +105,6 @@ rendering era needs its own port; see the [roadmap](ROADMAP.md).
 
 ## Credits
 
-- **[PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators)** by Gaider10 (MIT) — the original inspiration.
-  The heart layout math (rows of ten, row compression, halves) was adapted from it;
-  all HeartsPlus code was written from scratch for the Minecraft 26.x rendering system.
 - Vanilla heart sprites used by the built-in texture mode come from Minecraft itself.
 
 ## License
