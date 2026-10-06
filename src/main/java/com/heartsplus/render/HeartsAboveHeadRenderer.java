@@ -1,6 +1,9 @@
 package com.heartsplus.render;
 
+import com.heartsplus.HeartsPlus;
 import com.heartsplus.HeartsPlusConfig;
+import java.util.HashSet;
+import java.util.Set;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.RenderLayers;
@@ -9,11 +12,14 @@ import net.minecraft.client.render.command.OrderedRenderCommandQueue;
 import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.render.state.CameraRenderState;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.SpriteIdentifier;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4fc;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.joml.Quaternionf;
 
 /**
@@ -33,6 +39,15 @@ import org.joml.Quaternionf;
  * atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
+	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
+	/** Bundled-file textures that failed to load; those hearts fall back to atlas sprites. */
+	private static final Set<Identifier> unavailableVanillaTextures = new HashSet<>();
+	/** Each skip reason is logged once so missing hearts can be diagnosed from the log. */
+	private static final Set<String> reportedSkips = new HashSet<>();
+	private static boolean vanillaTexturesWarmed;
+	private static boolean reportedFirstHeart;
+	private static boolean reportedFailure;
+
 	/** One nameplate text row in world units; must track vanilla label rendering. */
 	private static final float NAMETAG_ROW_HEIGHT = 9.0F * 1.15F * 0.025F;
 	/** Small breathing room between the nameplate and the bottom heart row, in world units. */
@@ -49,25 +64,65 @@ public final class HeartsAboveHeadRenderer {
 	private HeartsAboveHeadRenderer() {
 	}
 
+	/**
+	 * Registers and uploads every bundled heart texture before the first
+	 * frame needs them. Lazy registration from inside render submission
+	 * produces textures that are never actually uploaded, which makes the
+	 * hearts invisible, so warm-up is done from the first client tick.
+	 */
+	public static void warmUpVanillaTextures(TextureManager textureManager) {
+		if (vanillaTexturesWarmed) {
+			return;
+		}
+		vanillaTexturesWarmed = true;
+		for (HeartType type : HeartType.values()) {
+			for (Identifier texture : type.fileTextures()) {
+				try {
+					textureManager.getTexture(texture);
+				} catch (Exception e) {
+					unavailableVanillaTextures.add(texture);
+					LOGGER.warn("Failed to load bundled heart texture {}; falling back to atlas sprites", texture, e);
+				}
+			}
+		}
+	}
+
 	public static void render(PlayerEntityRenderState state, HealthHolder health, MatrixStack matrices,
 			OrderedRenderCommandQueue queue, CameraRenderState cameraState) {
+		try {
+			renderHearts(state, health, matrices, queue, cameraState);
+		} catch (Throwable t) {
+			if (!reportedFailure) {
+				reportedFailure = true;
+				LOGGER.error("HeartsPlus failed to render hearts; further errors are suppressed", t);
+			}
+		}
+	}
+
+	private static void renderHearts(PlayerEntityRenderState state, HealthHolder health, MatrixStack matrices,
+			OrderedRenderCommandQueue queue, CameraRenderState cameraState) {
 		if (!HeartsPlusConfig.isEnabled()) {
+			skipOnce("mod disabled");
 			return;
 		}
 		if (health.heartsplus$isLocalPlayer() && !HeartsPlusConfig.isShowOwnHearts()) {
+			skipOnce("own player hidden (enable 'Show above yourself')");
 			return;
 		}
 		double maxDistance = HeartsPlusConfig.getRenderDistance();
 		if (state.squaredDistanceToCamera > maxDistance * maxDistance) {
+			skipOnce("player beyond the render distance");
 			return;
 		}
 		if (state.invisibleToPlayer
 				&& !(HeartsPlusConfig.isShowInvisiblePlayers() && health.heartsplus$hasVisibleArmour())) {
 			// Hidden by default; even when enabled, armour is the only thing
 			// that betrays an invisible player.
+			skipOnce("player is invisible");
 			return;
 		}
 		if (!HeartsPlusConfig.isShowSneakingPlayers() && state.sneaking) {
+			skipOnce("player is sneaking");
 			return;
 		}
 
@@ -136,15 +191,31 @@ public final class HeartsAboveHeadRenderer {
 		}
 
 		matrices.pop();
+		if (!reportedFirstHeart) {
+			reportedFirstHeart = true;
+			LOGGER.info("Hearts submitted above a player for the first time ({} hearts, texture {})",
+					layout.heartsTotal(), container.texture());
+		}
+	}
+
+	private static void skipOnce(String reason) {
+		if (reportedSkips.add(reason)) {
+			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showSneaking={}, vanillaTextures={}, scale={}, renderDistance={}]",
+					reason, HeartsPlusConfig.isEnabled(), HeartsPlusConfig.isShowOwnHearts(),
+					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowSneakingPlayers(),
+					HeartsPlusConfig.isVanillaTextures(), HeartsPlusConfig.getScale(), HeartsPlusConfig.getRenderDistance());
+		}
 	}
 
 	private static ResolvedSprite resolve(HeartType type, boolean half, boolean blinking) {
-		if (HeartsPlusConfig.isUseVanillaTextures()) {
+		if (HeartsPlusConfig.isVanillaTextures()) {
 			// Standalone texture files are drawn whole, so UV covers 0..1.
 			Identifier texture = blinking
 					? half ? type.fileHalfBlinking : type.fileFullBlinking
 					: half ? type.fileHalf : type.fileFull;
-			return new ResolvedSprite(texture, 0.0F, 0.0F, 1.0F, 1.0F);
+			if (!unavailableVanillaTextures.contains(texture)) {
+				return new ResolvedSprite(texture, 0.0F, 0.0F, 1.0F, 1.0F);
+			}
 		}
 		Identifier spriteId = blinking
 				? half ? type.atlasHalfBlinking : type.atlasFullBlinking

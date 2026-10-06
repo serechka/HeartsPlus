@@ -42,9 +42,9 @@ public class HeartsPlusConfigScreen extends Screen {
 		addDrawableChild(CyclingButtonWidget.onOffBuilder(
 				Text.translatable("option.heartsplus.textures.vanilla"),
 				Text.translatable("option.heartsplus.textures.pack"),
-				HeartsPlusConfig.isUseVanillaTextures())
+				HeartsPlusConfig.isVanillaTextures())
 				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable("heartsplus.config.textures"),
-						(button, value) -> HeartsPlusConfig.setUseVanillaTextures(value)));
+						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
 
 		addDrawableChild(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
 				HeartsPlusConfig.getScale(), HeartsPlusConfig::setScaleSilently,

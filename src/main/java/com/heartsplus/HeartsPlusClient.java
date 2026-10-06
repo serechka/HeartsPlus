@@ -1,5 +1,6 @@
 package com.heartsplus;
 
+import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -8,14 +9,19 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HeartsPlusClient implements ClientModInitializer {
+	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
 	private static KeyBinding toggleRenderingKey;
 	private static KeyBinding openSettingsKey;
+	private static boolean texturesWarmedUp;
 
 	@Override
 	public void onInitializeClient() {
 		HeartsPlusConfig.load();
+		LOGGER.info("HeartsPlus client initialized");
 
 		KeyBinding.Category category = KeyBinding.Category.create(
 				Identifier.of(HeartsPlus.MOD_ID, "main"));
@@ -25,6 +31,12 @@ public class HeartsPlusClient implements ClientModInitializer {
 				"key.heartsplus.settings", GLFW.GLFW_KEY_UNKNOWN, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			// First tick: register and upload the bundled heart textures before
+			// any frame tries to draw them (lazy mid-frame uploads stay blank).
+			if (!texturesWarmedUp) {
+				texturesWarmedUp = true;
+				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
+			}
 			while (toggleRenderingKey.wasPressed()) {
 				HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());
 				reportState(client);

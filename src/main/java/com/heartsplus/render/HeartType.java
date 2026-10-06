@@ -39,6 +39,11 @@ public enum HeartType {
 		this.fileHalfBlinking = Identifier.of("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
 	}
 
+	/** All bundled-file texture ids of this family, for warm-up registration. */
+	public Identifier[] fileTextures() {
+		return new Identifier[]{this.fileFull, this.fileHalf, this.fileFullBlinking, this.fileHalfBlinking};
+	}
+
 	/**
 	 * The family vanilla's HUD would show for a player with the given status
 	 * effects; priority matches Hud.HeartType.forPlayer.

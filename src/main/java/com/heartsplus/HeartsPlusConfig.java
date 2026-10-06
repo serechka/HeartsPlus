@@ -34,7 +34,7 @@ public final class HeartsPlusConfig {
 	public boolean showOwnHearts = false;
 	public boolean showInvisiblePlayers = false;
 	public boolean showSneakingPlayers = false;
-	public boolean useVanillaTextures = false;
+	public boolean vanillaTextures = false;
 	public int heartOffset = 0;
 	public double scale = 1.0;
 	public double renderDistance = 64.0;
@@ -85,12 +85,12 @@ public final class HeartsPlusConfig {
 	 * active resource pack), true to use the vanilla textures bundled with
 	 * the mod regardless of any installed pack.
 	 */
-	public static boolean isUseVanillaTextures() {
-		return instance.useVanillaTextures;
+	public static boolean isVanillaTextures() {
+		return instance.vanillaTextures;
 	}
 
-	public static void setUseVanillaTextures(boolean value) {
-		instance.useVanillaTextures = value;
+	public static void setVanillaTextures(boolean value) {
+		instance.vanillaTextures = value;
 		save();
 	}
 
