@@ -17,10 +17,8 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.Material;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import org.joml.Quaternionf;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +46,12 @@ public final class HeartsAboveHeadRenderer {
 	private static final Set<String> reportedSkips = new HashSet<>();
 	private static boolean vanillaTexturesWarmed;
 	private static boolean reportedFirstHeart;
-	private static boolean reportedFailure;
+	/** Render failures are logged with a stack this many times; later ones only bump the counter. */
+	private static final int MAX_REPORTED_FAILURES = 5;
+	/** One line per this many suppressed failures, so a persistent error stays visible without spam. */
+	private static final int SUPPRESSED_FAILURE_REPORT_STEP = 100;
+	private static int reportedFailures;
+	private static int suppressedFailures;
 
 	/** One nameplate text row in world units; must track vanilla label rendering. */
 	private static final float NAMETAG_ROW_HEIGHT = 9.0F * 1.15F * 0.025F;
@@ -93,9 +96,15 @@ public final class HeartsAboveHeadRenderer {
 		try {
 			renderHearts(state, health, poseStack, collector, cameraState);
 		} catch (Throwable t) {
-			if (!reportedFailure) {
-				reportedFailure = true;
-				LOGGER.error("HeartsPlus failed to render hearts; further errors are suppressed", t);
+			if (reportedFailures < MAX_REPORTED_FAILURES) {
+				reportedFailures++;
+				LOGGER.error("HeartsPlus failed to render hearts (report {} of {})", reportedFailures, MAX_REPORTED_FAILURES, t);
+			} else {
+				suppressedFailures++;
+				if (suppressedFailures % SUPPRESSED_FAILURE_REPORT_STEP == 0) {
+					LOGGER.warn("HeartsPlus: {} further render failures suppressed after the first {} reports",
+							suppressedFailures, MAX_REPORTED_FAILURES);
+				}
 			}
 		}
 	}
@@ -139,7 +148,9 @@ public final class HeartsAboveHeadRenderer {
 
 		poseStack.pushPose();
 		poseStack.translate(0.0F, heartsY(state), 0.0F);
-		poseStack.mulPose(new Quaternionf(cameraState.orientation));
+		// rotateAround(..., 0, 0, 0) equals a plain rotation and avoids the
+		// per-frame quaternion allocation a mulPose copy would need.
+		poseStack.rotateAround(cameraState.orientation, 0.0F, 0.0F, 0.0F);
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		poseStack.scale(pixelScale, -pixelScale, pixelScale);
 		poseStack.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
@@ -196,10 +207,6 @@ public final class HeartsAboveHeadRenderer {
 			reportedFirstHeart = true;
 			LOGGER.info("Hearts submitted above a player for the first time ({} hearts, texture {})",
 					layout.heartsTotal(), container.texture());
-			var player = Minecraft.getInstance().player;
-			if (player != null) {
-				player.displayClientMessage(Component.translatable("heartsplus.message.first_render"), true);
-			}
 		}
 	}
 
@@ -334,13 +341,15 @@ public final class HeartsAboveHeadRenderer {
 		float endY = yTop + HEART_SIZE;
 		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
 		// element must be set or the BufferBuilder validation rejects the vertex.
+		// The pipeline culls back faces, so the winding must match vanilla text
+		// quads (BakedSheetGlyph): top-left, bottom-left, bottom-right, top-right.
 		vertices.addVertex(pose, x, yTop, 0.0F).setUv(sprite.u0(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
+		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
 		vertices.addVertex(pose, endX, endY, 0.0F).setUv(sprite.u1(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
+		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
 	}
 }
