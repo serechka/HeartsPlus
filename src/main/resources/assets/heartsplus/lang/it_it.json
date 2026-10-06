@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "Indicatori di vita attivati",
   "heartsplus.message.disabled": "Indicatori di vita disattivati",
   "heartsplus.config.show_invisible": "Mostra invisibili",
-  "heartsplus.config.show_sneaking": "Mostra abbassati",
-  "heartsplus.message.first_render": "HeartsPlus: i cuori ora vengono mostrati"
+  "heartsplus.config.show_sneaking": "Mostra abbassati"
 }
