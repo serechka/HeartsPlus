@@ -30,14 +30,16 @@ public final class HeartsPlusConfig {
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
-	public boolean modEnabled = true;
-	public boolean showOwnHearts = false;
-	public boolean showInvisiblePlayers = false;
-	public boolean showSneakingPlayers = false;
-	public boolean vanillaTextures = false;
-	public int heartOffset = 0;
-	public double scale = 1.0;
-	public double renderDistanceBlocks = 128.0;
+	// Gson writes these directly; all mutations go through the clamped static
+	// accessors below, so nothing can bypass validation.
+	private boolean modEnabled = true;
+	private boolean showOwnHearts = false;
+	private boolean showInvisiblePlayers = false;
+	private boolean showSneakingPlayers = false;
+	private boolean vanillaTextures = false;
+	private int heartOffset = 0;
+	private double scale = 1.0;
+	private double renderDistanceBlocks = 128.0;
 
 	public static boolean isEnabled() {
 		return instance.modEnabled;

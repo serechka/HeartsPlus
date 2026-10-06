@@ -12,11 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class HeartsPlusClient implements ClientModInitializer {
-	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
 	/** GLFW key codes, inlined so the mod does not depend on the LWJGL glfw package. */
 	private static final int KEY_UNKNOWN = -1;
 	private static final int KEY_H = 72;
@@ -27,7 +24,7 @@ public class HeartsPlusClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		HeartsPlusConfig.load();
-		LOGGER.info("HeartsPlus client initialized");
+		HeartsPlusLog.LOGGER.info("HeartsPlus client initialized");
 
 		// Atlas sprites are re-stitched on resource reloads and their UV
 		// coordinates move, so the renderer's sprite cache must be dropped.

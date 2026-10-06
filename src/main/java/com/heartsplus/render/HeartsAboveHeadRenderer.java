@@ -1,7 +1,7 @@
 package com.heartsplus.render;
 
-import com.heartsplus.HeartsPlus;
 import com.heartsplus.HeartsPlusConfig;
+import com.heartsplus.HeartsPlusLog;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.EnumMap;
@@ -23,7 +23,6 @@ import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Draws a row of vanilla heart sprites above an avatar's head.
@@ -42,7 +41,7 @@ import org.slf4j.LoggerFactory;
  * binds individual files instead of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
-	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
+	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
 	/** Bundled-file textures that failed to load; those hearts fall back to atlas sprites. */
 	private static final Set<Identifier> unavailableVanillaTextures = new HashSet<>();
 	/** Each skip reason is logged once so missing hearts can be diagnosed from the log. */
