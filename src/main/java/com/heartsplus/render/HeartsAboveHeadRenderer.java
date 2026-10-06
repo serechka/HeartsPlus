@@ -67,7 +67,7 @@ public final class HeartsAboveHeadRenderer {
 			// that betrays an invisible player.
 			return;
 		}
-		if (HeartsPlusConfig.isHideWhenSneaking() && state.sneaking) {
+		if (!HeartsPlusConfig.isShowSneakingPlayers() && state.sneaking) {
 			return;
 		}
 
@@ -122,19 +122,17 @@ public final class HeartsAboveHeadRenderer {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light));
 			}
 		}
-		if (HeartsPlusConfig.isShowAbsorption()) {
-			submitPass(queue, matrices, absorbingFull, (entry, vertices) -> {
-				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
-					if (!layout.isYellowHalf(heart)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(heart), layout.yTop(heart), absorbingFull, light);
-					}
+		submitPass(queue, matrices, absorbingFull, (entry, vertices) -> {
+			for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
+				if (!layout.isYellowHalf(heart)) {
+					emitHeart(vertices, entry.getPositionMatrix(), layout.x(heart), layout.yTop(heart), absorbingFull, light);
 				}
-			});
-			if (layout.hasYellowHalf()) {
-				submitPass(queue, matrices, absorbingHalf, (entry, vertices) ->
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1),
-								absorbingHalf, light));
 			}
+		});
+		if (layout.hasYellowHalf()) {
+			submitPass(queue, matrices, absorbingHalf, (entry, vertices) ->
+					emitHeart(vertices, entry.getPositionMatrix(), layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1),
+							absorbingHalf, light));
 		}
 
 		matrices.pop();
@@ -198,7 +196,7 @@ public final class HeartsAboveHeadRenderer {
 		int heartsRed = MathHelper.ceil(healthRed / 2.0F);
 		boolean lastRedHalf = (healthRed & 1) == 1;
 		int heartsNormal = MathHelper.ceil(maxHealth / 2.0F);
-		int heartsYellow = HeartsPlusConfig.isShowAbsorption() ? MathHelper.ceil(healthYellow / 2.0F) : 0;
+		int heartsYellow = MathHelper.ceil(healthYellow / 2.0F);
 		boolean lastYellowHalf = (healthYellow & 1) == 1;
 		int heartsTotal = heartsNormal + heartsYellow;
 
@@ -206,7 +204,7 @@ public final class HeartsAboveHeadRenderer {
 		int heartsBlink = MathHelper.ceil(blinkHalves / 2.0F);
 		boolean lastBlinkHalf = (blinkHalves & 1) == 1;
 
-		int heartsPerRow = HeartsPlusConfig.isStackHearts() ? HEARTS_PER_ROW : Math.max(heartsTotal, 1);
+		int heartsPerRow = HEARTS_PER_ROW;
 		int rowsTotal = (heartsTotal + heartsPerRow - 1) / heartsPerRow;
 		// Vanilla-like row compression: rows slide closer together as the bar
 		// grows taller, down to a minimum overlap step.

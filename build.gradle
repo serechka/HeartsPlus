@@ -4,7 +4,7 @@ plugins {
 
 // This branch targets the legacy 1.21.x line using Yarn mappings.
 // Targets the final release of the legacy 1.21.x line.
-version = "${project.mod_version}+1.21.11"
+version = "${project.mod_version}-1.21.11-fabric"
 group = project.maven_group
 
 base {
@@ -52,7 +52,6 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
-	withSourcesJar()
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21

@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "Activer/désactiver les indicateurs de vie",
 	"key.heartsplus.settings": "Ouvrir les paramètres de HeartsPlus",
 	"heartsplus.config.title": "Paramètres de HeartsPlus",
-	"heartsplus.config.enabled": "Indicateurs",
-	"heartsplus.config.show_own": "Soi-même",
-	"heartsplus.config.absorption": "Absorption",
-	"heartsplus.config.stack": "Rangées de 10",
-	"heartsplus.config.hide_sneaking": "Masquer accroupis",
+	"heartsplus.config.enabled": "Montrer les cœurs",
+	"heartsplus.config.show_own": "Montrer sur soi",
 	"heartsplus.config.textures": "Textures",
 	"option.heartsplus.textures.pack": "Du pack de ressources",
 	"option.heartsplus.textures.vanilla": "Vanilla",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "Rétablir les valeurs par défaut",
 	"heartsplus.message.enabled": "Indicateurs de vie activés",
 	"heartsplus.message.disabled": "Indicateurs de vie désactivés",
-	"heartsplus.config.show_invisible": "Montrer invisibles"
+	"heartsplus.config.show_invisible": "Montrer invisibles",
+	"heartsplus.config.show_sneaking": "Montrer accroupis"
 }

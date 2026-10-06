@@ -37,31 +37,29 @@ public class HeartsPlusConfigScreen extends Screen {
 
 		addToggle(left, y, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
-		addToggle(left, y + ROW_STEP, "heartsplus.config.absorption", HeartsPlusConfig.isShowAbsorption(), HeartsPlusConfig::setShowAbsorption);
-		addToggle(right, y + ROW_STEP, "heartsplus.config.stack", HeartsPlusConfig.isStackHearts(), HeartsPlusConfig::setStackHearts);
-		addToggle(left, y + 2 * ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
-		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.hide_sneaking", HeartsPlusConfig.isHideWhenSneaking(), HeartsPlusConfig::setHideWhenSneaking);
+		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
+		addToggle(right, y + ROW_STEP, "heartsplus.config.show_sneaking", HeartsPlusConfig.isShowSneakingPlayers(), HeartsPlusConfig::setShowSneakingPlayers);
 		addDrawableChild(CyclingButtonWidget.onOffBuilder(
 				Text.translatable("option.heartsplus.textures.vanilla"),
 				Text.translatable("option.heartsplus.textures.pack"),
 				HeartsPlusConfig.isUseVanillaTextures())
-				.build(left, y + 3 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable("heartsplus.config.textures"),
+				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setUseVanillaTextures(value)));
 
-		addDrawableChild(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
+		addDrawableChild(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
 				HeartsPlusConfig.getScale(), HeartsPlusConfig::setScaleSilently,
 				v -> Text.translatable("heartsplus.config.scale", String.format(Locale.ROOT, "%.2f", v))));
-		addDrawableChild(slider(left, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
+		addDrawableChild(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
 				HeartsPlusConfig.getRenderDistance(), HeartsPlusConfig::setRenderDistanceSilently,
 				v -> Text.translatable("heartsplus.config.render_distance", String.format(Locale.ROOT, "%.0f", v))));
-		addDrawableChild(slider(right, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+		addDrawableChild(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
 				HeartsPlusConfig.getHeartOffset(), v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
 				v -> Text.translatable("heartsplus.config.heart_offset", String.format(Locale.ROOT, "%.0f", v))));
 
 		addDrawableChild(ButtonWidget.builder(Text.translatable("gui.done"), button -> close())
-				.dimensions(centerX - WIDGET_WIDTH - 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.dimensions(centerX - WIDGET_WIDTH - 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 		addDrawableChild(ButtonWidget.builder(Text.translatable("heartsplus.config.reset"), button -> resetAndRebuild())
-				.dimensions(centerX + 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.dimensions(centerX + 5, y + 4 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 	}
 
 	@Override
