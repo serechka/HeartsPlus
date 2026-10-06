@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "体力インジケーターを有効にしました",
   "heartsplus.message.disabled": "体力インジケーターを無効にしました",
   "heartsplus.config.show_invisible": "透明を表示",
-  "heartsplus.config.show_sneaking": "スニークを表示",
-  "heartsplus.message.first_render": "HeartsPlus：ハートが表示されました"
+  "heartsplus.config.show_behind_blocks": "ブロックの向こうも表示"
 }

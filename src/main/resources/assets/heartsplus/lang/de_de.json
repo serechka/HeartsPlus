@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "Herzanzeigen aktiviert",
   "heartsplus.message.disabled": "Herzanzeigen deaktiviert",
   "heartsplus.config.show_invisible": "Unsichtbare zeigen",
-  "heartsplus.config.show_sneaking": "Schleicher zeigen",
-  "heartsplus.message.first_render": "HeartsPlus: Herzen werden jetzt angezeigt"
+  "heartsplus.config.show_behind_blocks": "Hinter Blöcken anzeigen"
 }
