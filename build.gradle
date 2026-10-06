@@ -3,10 +3,10 @@ plugins {
 }
 
 // NeoForge build of HeartsPlus for the legacy Minecraft 1.21.x line
-// (1.21.2/1.21.3, Mojang mappings). Those versions still render through the
+// (1.21.4/1.21.5, Mojang mappings). Those versions still render through the
 // classic LivingEntityRenderer.render path; only the bootstrap and packaging
 // are NeoForge.
-version = "${project.mod_version}-1.21.2-neoforge"
+version = "${project.mod_version}-1.21.4-neoforge"
 group = project.maven_group
 
 base {

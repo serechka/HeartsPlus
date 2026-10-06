@@ -20,13 +20,13 @@ config = "heartsplus.mixins.json"
 [[dependencies.heartsplus]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.2,)"
+versionRange = "[21.4,)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.heartsplus]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.2,1.21.4)"
+versionRange = "[1.21.4,1.21.6)"
 ordering = "NONE"
 side = "CLIENT"

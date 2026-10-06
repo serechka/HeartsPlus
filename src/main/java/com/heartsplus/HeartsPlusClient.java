@@ -4,13 +4,14 @@ import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
@@ -62,9 +63,8 @@ public class HeartsPlusClient {
 	/** Atlas sprites are re-stitched on resource reloads and their UV coordinates move, so the cache must be dropped. */
 	static final class ResourceReloadListener {
 		@SubscribeEvent
-		public void registerReloadListeners(RegisterClientReloadListenersEvent event) {
-			// This stretch registers plain listeners: there is no per-listener id yet.
-			event.registerReloadListener(
+		public void registerReloadListeners(AddClientReloadListenersEvent event) {
+			event.addListener(ResourceLocation.fromNamespaceAndPath(HeartsPlus.MOD_ID, "atlas_sprite_cache"),
 					(ResourceManagerReloadListener) resourceManager -> HeartsAboveHeadRenderer.invalidateAtlasSprites());
 		}
 	}
