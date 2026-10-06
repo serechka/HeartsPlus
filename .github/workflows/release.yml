@@ -7,7 +7,7 @@ name: Release
 #
 # Required repository secrets:
 #   MODRINTH_TOKEN - Modrinth API token with write scope
-# Push a tag on main to release:  git tag v0.1.0 && git push origin v0.1.0
+# Push a tag on main to release:  git tag v0.4.0 && git push origin v0.4.0
 on:
   push:
     tags: ["v*"]
@@ -57,19 +57,22 @@ jobs:
         with:
           modrinth-id: adAcTcwa
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: build/libs/heartsplus-*.jar
+          files: |
+            build/libs/heartsplus-*.jar
+            !build/libs/*-sources.jar
           name: HeartsPlus ${{ github.ref_name }} (${{ matrix.mc }} ${{ matrix.loader }})
           version-type: beta
           loaders: ${{ matrix.loader }}
           game-versions: ${{ matrix.mc == '26.x' && '26.1, 26.2, 26.3' || matrix.mc }}
-          dependencies: |
-            fabric-api(required)
+          dependencies: ${{ matrix.loader == 'fabric' && 'fabric-api(required)' || '' }}
 
       - name: Upload branch artifact
         uses: actions/upload-artifact@v4
         with:
           name: heartsplus-${{ matrix.mc }}-${{ matrix.loader }}
-          path: build/libs/heartsplus-*.jar
+          path: |
+            build/libs/heartsplus-*.jar
+            !build/libs/*-sources.jar
           if-no-files-found: error
 
   github-release:
@@ -78,6 +81,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Compute bare version number
+        id: version
+        run: echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub release with Modrinth download links
         uses: softprops/action-gh-release@v2
         with:
@@ -85,8 +92,8 @@ jobs:
           body: |
             Beta build. Downloads are hosted on Modrinth:
 
-            - [Fabric, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ github.ref_name }}-26.x-fabric)
-            - [Fabric, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ github.ref_name }}-1.21.11-fabric)
-            - [NeoForge, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ github.ref_name }}-26.x-neoforge)
+            - [Fabric, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-fabric)
+            - [Fabric, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-1.21.11-fabric)
+            - [NeoForge, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-neoforge)
           generate_release_notes: false
           prerelease: true
