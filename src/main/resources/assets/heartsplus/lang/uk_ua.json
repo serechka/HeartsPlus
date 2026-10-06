@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "Індикатори здоров'я увімкнено",
   "heartsplus.message.disabled": "Індикатори здоров'я вимкнено",
   "heartsplus.config.show_invisible": "Показувати невидимих",
-  "heartsplus.config.show_sneaking": "Показувати крадучихся",
-  "heartsplus.message.first_render": "HeartsPlus: сердечка тепер відображаються"
+  "heartsplus.config.show_sneaking": "Показувати крадучихся"
 }
