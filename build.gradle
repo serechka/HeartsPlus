@@ -36,6 +36,14 @@ dependencies {
 
 	// ModMenu (optional at runtime, entrypoint is only used when present)
 	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
+	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+	useJUnitPlatform()
 }
 
 processResources {

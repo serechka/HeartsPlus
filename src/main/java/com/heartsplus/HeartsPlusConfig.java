@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -146,15 +145,28 @@ public final class HeartsPlusConfig {
 			save();
 			return;
 		}
-		try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-			HeartsPlusConfig read = GSON.fromJson(reader, HeartsPlusConfig.class);
+		try {
+			HeartsPlusConfig read = parse(Files.readString(path, StandardCharsets.UTF_8));
 			if (read != null) {
-				read.clamp();
 				instance = read;
 			}
 		} catch (IOException | com.google.gson.JsonParseException e) {
 			HeartsPlusLog.LOGGER.error("Failed to read config file {}", path, e);
 		}
+	}
+
+	/** Parses JSON into a clamped config, or null for empty input; package-private for tests. */
+	static HeartsPlusConfig parse(String json) {
+		HeartsPlusConfig read = GSON.fromJson(json, HeartsPlusConfig.class);
+		if (read != null) {
+			read.clamp();
+		}
+		return read;
+	}
+
+	/** Serializes to the on-disk JSON form; package-private for tests. */
+	static String serialize(HeartsPlusConfig config) {
+		return GSON.toJson(config);
 	}
 
 	public static void save() {

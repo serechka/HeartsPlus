@@ -21,7 +21,6 @@ import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.Mth;
 import org.slf4j.Logger;
 
 /**
@@ -68,12 +67,6 @@ public final class HeartsAboveHeadRenderer {
 	/** Small breathing room between the nameplate and the bottom heart row, in world units. */
 	private static final float NAMEPLATE_GAP = 2.0F * 0.025F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
-	private static final float HEART_SIZE = 9.0F;
-	private static final float HEART_SPACING = 8.0F;
-	private static final int HEARTS_PER_ROW = 10;
-	private static final int ROW_SPACING_BASE = 10;
-	private static final int MIN_ROW_SPACING = 3;
-	private static final int BLINK_INTERVAL_TICKS = 3;
 
 	private HeartsAboveHeadRenderer() {
 	}
@@ -154,7 +147,8 @@ public final class HeartsAboveHeadRenderer {
 			return;
 		}
 
-		Layout layout = layoutOf(health);
+		HeartBarLayout layout = HeartBarLayout.of(health.heartsplus$getHealth(), health.heartsplus$getMaxHealth(),
+				health.heartsplus$getAbsorption(), health.heartsplus$getBlinkOldHealth());
 		if (layout.heartsTotal() <= 0) {
 			// Degenerate health values — nothing to draw, skip all geometry work.
 			return;
@@ -175,7 +169,8 @@ public final class HeartsAboveHeadRenderer {
 
 		int light = state.lightCoords;
 		int blinkFrom = layout.heartsRed();
-		int blinkTo = blinkTo(health, layout, (int) Math.floor(state.ageInTicks));
+		int blinkTo = layout.blinkUpperBound((int) Math.floor(state.ageInTicks), health.heartsplus$getBlinkEndTick(),
+				health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth());
 
 		// Sprites are resolved lazily per pass so empty passes (no blinking, no
 		// absorption) cost nothing at all.
@@ -293,21 +288,6 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	/**
-	 * Hearts between the current and pre-drop health blink for a short window
-	 * after damage, alternating on a fixed cadence like the vanilla HUD.
-	 * Returns the exclusive upper heart index, or the current index when not
-	 * in the blink window / on the "off" beat of the cadence.
-	 */
-	private static int blinkTo(HealthHolder health, Layout layout, int nowTick) {
-		if (nowTick >= health.heartsplus$getBlinkEndTick()
-				|| health.heartsplus$getBlinkOldHealth() <= health.heartsplus$getHealth()
-				|| nowTick / BLINK_INTERVAL_TICKS % 2 != 0) {
-			return layout.heartsRed();
-		}
-		return Math.min(layout.heartsBlink(), layout.heartsNormal());
-	}
-
-	/**
 	 * Height above the entity origin, sitting on top of the nameplate
 	 * when one is displayed, mirroring vanilla name tag placement.
 	 * The +0.5F pad matches the nameplate attachment lift vanilla applies.
@@ -323,74 +303,13 @@ public final class HeartsAboveHeadRenderer {
 		return state.boundingBoxHeight + 0.5F + NAMEPLATE_GAP;
 	}
 
-	private static Layout layoutOf(HealthHolder health) {
-		int healthRed = Mth.ceil(health.heartsplus$getHealth());
-		int maxHealth = Mth.ceil(health.heartsplus$getMaxHealth());
-		int healthYellow = Mth.ceil(health.heartsplus$getAbsorption());
-
-		int heartsRed = Mth.ceil(healthRed / 2.0F);
-		boolean lastRedHalf = (healthRed & 1) == 1;
-		int heartsNormal = Mth.ceil(maxHealth / 2.0F);
-		int heartsYellow = Mth.ceil(healthYellow / 2.0F);
-		boolean lastYellowHalf = (healthYellow & 1) == 1;
-		int heartsTotal = heartsNormal + heartsYellow;
-
-		int blinkHalves = Mth.ceil(health.heartsplus$getBlinkOldHealth());
-		int heartsBlink = Mth.ceil(blinkHalves / 2.0F);
-		boolean lastBlinkHalf = (blinkHalves & 1) == 1;
-
-		int heartsPerRow = HEARTS_PER_ROW;
-		int rowsTotal = (heartsTotal + heartsPerRow - 1) / heartsPerRow;
-		// Vanilla-like row compression: rows slide closer together as the bar
-		// grows taller, down to a minimum overlap step.
-		int rowOffset = Math.max(ROW_SPACING_BASE - (rowsTotal - 2), MIN_ROW_SPACING);
-		float rowWidth = Math.min(heartsTotal, heartsPerRow) * HEART_SPACING + 1.0F;
-		float startX = -rowWidth / 2.0F;
-
-		return new Layout(heartsRed, heartsNormal, heartsTotal, lastRedHalf, lastYellowHalf, lastBlinkHalf,
-				heartsPerRow, rowOffset, startX, heartsBlink);
-	}
-
-	/**
-	 * Precomputed heart-bar geometry. Row 0 is the bottom row (closest to
-	 * the nameplate); extra rows stack upward like the vanilla HUD.
-	 */
-	private record Layout(int heartsRed, int heartsNormal, int heartsTotal, boolean lastRedHalf, boolean lastYellowHalf,
-			boolean lastBlinkHalf, int heartsPerRow, int rowOffset, float startX, int heartsBlink) {
-
-		float x(int heart) {
-			return this.startX + heart % this.heartsPerRow * HEART_SPACING;
-		}
-
-		/** Top edge of a heart's quad in GUI pixels; rows grow upwards. */
-		float yTop(int heart) {
-			return -(heart / this.heartsPerRow * this.rowOffset) - HEART_SIZE;
-		}
-
-		boolean isRedHalf(int heart) {
-			return heart == this.heartsRed - 1 && this.lastRedHalf;
-		}
-
-		boolean hasRedHalf() {
-			return this.heartsRed > 0 && this.lastRedHalf;
-		}
-
-		boolean isYellowHalf(int heart) {
-			return heart == this.heartsTotal - 1 && this.lastYellowHalf && this.heartsTotal > this.heartsNormal;
-		}
-
-		boolean hasYellowHalf() {
-			return this.heartsTotal > this.heartsNormal && this.lastYellowHalf;
-		}
-	}
-
 	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
 	}
 
 	private static void emitHeart(PoseStack.Pose pose, VertexConsumer vertices, float x, float yTop,
 			ResolvedSprite sprite, int light) {
-		float endX = x + HEART_SIZE;
-		float endY = yTop + HEART_SIZE;
+		float endX = x + HeartBarLayout.HEART_SIZE;
+		float endY = yTop + HeartBarLayout.HEART_SIZE;
 		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
 		// element must be set or the BufferBuilder validation rejects the vertex.
 		// The pipeline culls back faces, so the winding must match vanilla text
