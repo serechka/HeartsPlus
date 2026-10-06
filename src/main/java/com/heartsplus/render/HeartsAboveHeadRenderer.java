@@ -24,11 +24,11 @@ import net.minecraft.util.Mth;
  *
  * <p>Hearts are drawn with the world-text render type, which — like name
  * tags — is shaded only by the lightmap, so they look identical from every
- * viewing angle. Like a nameplate, each pass is submitted twice: a bright
- * normal variant that is occluded by walls, and a dim see-through variant
- * that shows through walls. Sneaking players get no hearts at all, matching
- * how vanilla hides their name tag. Recent health drops blink exactly like
- * the vanilla HUD does. Geometry is submitted in passes per texture
+ * viewing angle. Hearts are occluded by walls like normal geometry;
+ * a dim see-through variant is planned but needs a custom pipeline.
+ * Sneaking players get no hearts at all, matching how vanilla hides their
+ * name tag. Recent health drops blink exactly like the vanilla HUD does.
+ * Geometry is submitted in passes per texture
  * (containers, health, blinking, absorption) because vanilla-texture mode
  * binds individual files instead of the shared GUI atlas.</p>
  */
@@ -66,7 +66,7 @@ public final class HeartsAboveHeadRenderer {
 			// that betrays an invisible player.
 			return;
 		}
-		if (HeartsPlusConfig.isHideWhenSneaking() && state.isCrouching) {
+		if (!HeartsPlusConfig.isShowSneakingPlayers() && state.isCrouching) {
 			return;
 		}
 
@@ -124,18 +124,16 @@ public final class HeartsAboveHeadRenderer {
 						emitHeart(pose, vertices, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, light));
 			}
 		}
-		if (HeartsPlusConfig.isShowAbsorption()) {
-			submitPass(collector, poseStack, absorbingFull, (pose, vertices) -> {
-				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
-					if (!layout.isYellowHalf(heart)) {
-						emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light);
-					}
+		submitPass(collector, poseStack, absorbingFull, (pose, vertices) -> {
+			for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
+				if (!layout.isYellowHalf(heart)) {
+					emitHeart(pose, vertices, layout.x(heart), layout.yTop(heart), absorbingFull, light);
 				}
-			});
-			if (layout.hasYellowHalf()) {
-				submitPass(collector, poseStack, absorbingHalf, (pose, vertices) ->
-						emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light));
 			}
+		});
+		if (layout.hasYellowHalf()) {
+			submitPass(collector, poseStack, absorbingHalf, (pose, vertices) ->
+					emitHeart(pose, vertices, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, light));
 		}
 
 		poseStack.popPose();
@@ -157,10 +155,10 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void submitPass(SubmitNodeCollector collector, PoseStack poseStack, ResolvedSprite sprite,
 			SubmitNodeCollector.CustomGeometryRenderer renderer) {
-		// Mirrors vanilla nameplates: the normal layer is occluded by walls,
-		// the see-through layer shows dimly through them.
+		// NOTE: the see-through text pipeline is GUI-oriented in 26.x and
+		// breaks the whole custom-geometry phase when submitted here, so the
+		// wall-transparent variant is intentionally not drawn for now.
 		collector.submitCustomGeometry(poseStack, RenderTypes.text(sprite.texture()), renderer);
-		collector.submitCustomGeometry(poseStack, RenderTypes.textSeeThrough(sprite.texture()), renderer);
 	}
 
 	/**
@@ -202,7 +200,7 @@ public final class HeartsAboveHeadRenderer {
 		int heartsRed = Mth.ceil(healthRed / 2.0F);
 		boolean lastRedHalf = (healthRed & 1) == 1;
 		int heartsNormal = Mth.ceil(maxHealth / 2.0F);
-		int heartsYellow = HeartsPlusConfig.isShowAbsorption() ? Mth.ceil(healthYellow / 2.0F) : 0;
+		int heartsYellow = Mth.ceil(healthYellow / 2.0F);
 		boolean lastYellowHalf = (healthYellow & 1) == 1;
 		int heartsTotal = heartsNormal + heartsYellow;
 
@@ -210,7 +208,7 @@ public final class HeartsAboveHeadRenderer {
 		int heartsBlink = Mth.ceil(blinkHalves / 2.0F);
 		boolean lastBlinkHalf = (blinkHalves & 1) == 1;
 
-		int heartsPerRow = HeartsPlusConfig.isStackHearts() ? HEARTS_PER_ROW : Math.max(heartsTotal, 1);
+		int heartsPerRow = HEARTS_PER_ROW;
 		int rowsTotal = (heartsTotal + heartsPerRow - 1) / heartsPerRow;
 		// Vanilla-like row compression: rows slide closer together as the bar
 		// grows taller, down to a minimum overlap step.

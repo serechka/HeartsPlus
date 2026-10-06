@@ -3,7 +3,7 @@ plugins {
 }
 
 // NeoForge build of HeartsPlus for Minecraft 26.x.
-version = "${project.mod_version}+neoforge"
+version = "${project.mod_version}-26.x-neoforge"
 group = project.maven_group
 
 base {
@@ -33,7 +33,6 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(25)
 	}
-	withSourcesJar()
 
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25

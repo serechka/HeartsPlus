@@ -32,11 +32,9 @@ public final class HeartsPlusConfig {
 
 	public boolean enabled = true;
 	public boolean showOwnHearts = false;
-	public boolean showAbsorption = true;
-	public boolean stackHearts = true;
 	public boolean showInvisiblePlayers = false;
-	public boolean hideWhenSneaking = true;
-	public boolean useVanillaTextures = true;
+	public boolean showSneakingPlayers = false;
+	public boolean useVanillaTextures = false;
 	public int heartOffset = 0;
 	public double scale = 1.0;
 	public double renderDistance = 64.0;
@@ -59,24 +57,6 @@ public final class HeartsPlusConfig {
 		save();
 	}
 
-	public static boolean isShowAbsorption() {
-		return instance.showAbsorption;
-	}
-
-	public static void setShowAbsorption(boolean value) {
-		instance.showAbsorption = value;
-		save();
-	}
-
-	public static boolean isStackHearts() {
-		return instance.stackHearts;
-	}
-
-	public static void setStackHearts(boolean value) {
-		instance.stackHearts = value;
-		save();
-	}
-
 	/**
 	 * When false (default) invisible players get no hearts at all. When true,
 	 * an invisible player still shows hearts only while wearing armour.
@@ -90,12 +70,13 @@ public final class HeartsPlusConfig {
 		save();
 	}
 
-	public static boolean isHideWhenSneaking() {
-		return instance.hideWhenSneaking;
+	/** When false (default) sneaking players get no hearts, like their name tag; when true, hearts stay visible. */
+	public static boolean isShowSneakingPlayers() {
+		return instance.showSneakingPlayers;
 	}
 
-	public static void setHideWhenSneaking(boolean value) {
-		instance.hideWhenSneaking = value;
+	public static void setShowSneakingPlayers(boolean value) {
+		instance.showSneakingPlayers = value;
 		save();
 	}
 

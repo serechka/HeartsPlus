@@ -40,10 +40,8 @@ public class HeartsPlusConfigScreen extends Screen {
 		this.grid.rowSpacing(6).columnSpacing(10);
 		addToggle(0, 0, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(0, 1, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
-		addToggle(1, 0, "heartsplus.config.absorption", HeartsPlusConfig.isShowAbsorption(), HeartsPlusConfig::setShowAbsorption);
-		addToggle(1, 1, "heartsplus.config.stack", HeartsPlusConfig.isStackHearts(), HeartsPlusConfig::setStackHearts);
-		addToggle(2, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
-		addToggle(2, 1, "heartsplus.config.hide_sneaking", HeartsPlusConfig.isHideWhenSneaking(), HeartsPlusConfig::setHideWhenSneaking);
+		addToggle(1, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
+		addToggle(1, 1, "heartsplus.config.show_sneaking", HeartsPlusConfig.isShowSneakingPlayers(), HeartsPlusConfig::setShowSneakingPlayers);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(
 				Component.translatable("option.heartsplus.textures.vanilla"),
@@ -51,18 +49,18 @@ public class HeartsPlusConfigScreen extends Screen {
 				HeartsPlusConfig.isUseVanillaTextures())
 				.create(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setUseVanillaTextures(value));
-		this.grid.addChild(textures, 3, 0);
+		this.grid.addChild(textures, 2, 0);
 
 		this.grid.addChild(slider("heartsplus.config.scale", HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE, HeartsPlusConfig.getScale(),
 				HeartsPlusConfig::setScaleSilently, v -> Component.translatable("heartsplus.config.scale",
-						String.format(Locale.ROOT, "%.2f", v))), 4, 0);
+						String.format(Locale.ROOT, "%.2f", v))), 2, 1);
 		this.grid.addChild(slider("heartsplus.config.render_distance", HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE, HeartsPlusConfig.getRenderDistance(),
 				HeartsPlusConfig::setRenderDistanceSilently, v -> Component.translatable("heartsplus.config.render_distance",
-						String.format(Locale.ROOT, "%.0f", v))), 4, 1);
+						String.format(Locale.ROOT, "%.0f", v))), 3, 0);
 		this.grid.addChild(slider("heartsplus.config.heart_offset", HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getHeartOffset(),
 				v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
 				v -> Component.translatable("heartsplus.config.heart_offset",
-						String.format(Locale.ROOT, "%.0f", v))), 5, 0);
+						String.format(Locale.ROOT, "%.0f", v))), 3, 1);
 		this.rootLayout.addChild(this.grid);
 
 		LinearLayout buttons = LinearLayout.horizontal().spacing(10);
