@@ -2,7 +2,6 @@ package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
 import com.heartsplus.HeartsPlusLog;
-import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -16,6 +15,7 @@ import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
 import net.minecraft.client.texture.GuiAtlasManager;
 import net.minecraft.client.texture.ResourceTexture;
 import net.minecraft.client.texture.Sprite;
+import net.minecraft.client.texture.TextureContents;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.resource.ResourceManager;
@@ -342,8 +342,8 @@ public final class HeartsAboveHeadRenderer {
 		}
 
 		@Override
-		public void load(ResourceManager manager) throws IOException {
-			super.load(manager);
+		public void reload(TextureContents contents) {
+			super.reload(contents);
 			this.setFilter(false, false);
 		}
 	}
