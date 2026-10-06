@@ -20,6 +20,22 @@ neoForge {
 	}
 }
 
+dependencies {
+	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
+	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Unlike fabric-loom, ModDevGradle wires the game jars only into the main
+// source set; the tests need them on the classpath for Gson and for the
+// Identifier references inside HeartType.
+configurations.testCompileClasspath.extendsFrom configurations.modDevCompileDependencies
+configurations.testRuntimeClasspath.extendsFrom configurations.modDevRuntimeDependencies
+
+tasks.named('test', Test) {
+	useJUnitPlatform()
+}
+
 processResources {
 	def version = project.version
 	inputs.property "version", version
