@@ -28,7 +28,6 @@ public class HeartsPlusClient {
 	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
 	private static KeyMapping toggleRenderingKey;
 	private static KeyMapping openSettingsKey;
-	private static boolean texturesWarmedUp;
 
 	public HeartsPlusClient() {
 		HeartsPlusConfig.load();
@@ -51,8 +50,11 @@ public class HeartsPlusClient {
 		Minecraft client = Minecraft.getInstance();
 		// First tick: register and upload the bundled heart textures before
 		// any frame tries to draw them (lazy mid-frame uploads stay blank).
-		if (!texturesWarmedUp) {
-			texturesWarmedUp = true;
+		// Bundled heart textures are only needed in vanilla-texture mode.
+		// Registration must happen outside a frame (lazy mid-frame uploads
+		// stay blank), so it runs from the first tick with the mode enabled;
+		// the call itself no-ops once warmed.
+		if (HeartsPlusConfig.isVanillaTextures()) {
 			HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
 		}
 		while (toggleRenderingKey.consumeClick()) {
