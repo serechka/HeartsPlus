@@ -29,9 +29,9 @@ public class HeartsPlusClient implements ClientModInitializer {
 		KeyMapping.Category category = KeyMapping.Category.register(
 				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
 		toggleRenderingKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.toggle", KEY_H, category));
+				"key.heartsplus.toggle", KEY_UNKNOWN, category));
 		openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-				"key.heartsplus.settings", KEY_UNKNOWN, category));
+				"key.heartsplus.settings", KEY_H, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// First tick: register and upload the bundled heart textures before
