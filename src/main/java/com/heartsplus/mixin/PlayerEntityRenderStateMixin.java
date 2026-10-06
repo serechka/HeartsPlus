@@ -9,10 +9,10 @@ import org.spongepowered.asm.mixin.Unique;
 
 /**
  * Attaches health data to the vanilla PlayerEntityRenderState so the render
- * phase can draw hearts without reaching back into the entity. The blink
- * history itself is kept in {@link BlinkTracker} by UUID: render states are
- * recycled between frames, which used to wipe state-stored history and
- * silently killed the animation.
+ * phase can draw hearts without reaching back into the entity. The vanilla
+ * animation history itself is kept in {@link BlinkTracker} by UUID: render
+ * states are recycled between frames, which used to wipe state-stored history
+ * and silently killed the animation.
  */
 @Mixin(PlayerEntityRenderState.class)
 public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
@@ -33,7 +33,15 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 	@Unique
 	private boolean heartsplus$frozen;
 	@Unique
+	private boolean heartsplus$regenerating;
+	@Unique
 	private boolean heartsplus$visibleArmour;
+	@Unique
+	private int heartsplus$animationTick;
+	@Unique
+	private int heartsplus$displayHealth;
+	@Unique
+	private boolean heartsplus$blinking;
 
 	@Override
 	@Unique
@@ -79,26 +87,39 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
+	public boolean heartsplus$isRegenerating() {
+		return this.heartsplus$regenerating;
+	}
+
+	@Override
+	@Unique
 	public boolean heartsplus$hasVisibleArmour() {
 		return this.heartsplus$visibleArmour;
 	}
 
 	@Override
 	@Unique
-	public float heartsplus$getBlinkOldHealth() {
-		return BlinkTracker.getBlinkOldHealth(this.heartsplus$playerUuid);
+	public int heartsplus$getAnimationTick() {
+		return this.heartsplus$animationTick;
 	}
 
 	@Override
 	@Unique
-	public int heartsplus$getBlinkEndTick() {
-		return BlinkTracker.getBlinkEndTick(this.heartsplus$playerUuid);
+	public int heartsplus$getDisplayHealth() {
+		return this.heartsplus$displayHealth;
+	}
+
+	@Override
+	@Unique
+	public boolean heartsplus$isBlinking() {
+		return this.heartsplus$blinking;
 	}
 
 	@Override
 	@Unique
 	public void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour, int tick) {
+			boolean poisoned, boolean withered, boolean frozen, boolean regenerating, boolean hasVisibleArmour,
+			int tick, boolean invulnerable) {
 		this.heartsplus$playerUuid = playerId;
 		this.heartsplus$health = health;
 		this.heartsplus$maxHealth = maxHealth;
@@ -107,7 +128,11 @@ public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
 		this.heartsplus$frozen = frozen;
+		this.heartsplus$regenerating = regenerating;
 		this.heartsplus$visibleArmour = hasVisibleArmour;
-		BlinkTracker.update(playerId, health, tick);
+		this.heartsplus$animationTick = tick;
+		BlinkTracker.update(playerId, health, tick, invulnerable);
+		this.heartsplus$displayHealth = BlinkTracker.getDisplayHealth(playerId);
+		this.heartsplus$blinking = BlinkTracker.isBlinking(playerId);
 	}
 }
