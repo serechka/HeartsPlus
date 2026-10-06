@@ -7,7 +7,7 @@ branch-by-branch. ✔ = released, 🚧 = planned.
 
 | Era | Game versions | Rendering stack | Fabric | NeoForge | Forge |
 |---|---|---|:---:|:---:|:---:|
-| 26.x | 26.1 – 26.3 | SubmitNodeCollector | ✔ `main` | 🚧 | 🚧 |
+| 26.x | 26.1 – 26.3 | SubmitNodeCollector | ✔ `main` | 🔜 next | 🔜 next |
 | 1.21-d | 1.21.11 | OrderedRenderCommandQueue | ✔ `1.21` | 🚧 | n/a¹ |
 | 1.21-c | 1.21.9 – 1.21.10 | OrderedRenderCommandQueue (early) | 🚧 | 🚧 | n/a¹ |
 | 1.21-b | 1.21.6 – 1.21.8 | EntityRenderState + VertexConsumerProvider | 🚧 | 🚧 | 🚧 |
@@ -17,6 +17,13 @@ branch-by-branch. ✔ = released, 🚧 = planned.
 
 ¹ Forge as a loader is effectively replaced by NeoForge for 1.21+;
    the older line still receives classic Forge builds.
+
+## Decisions (2026-10)
+
+- Version strategy: fresh line (26.x) + popular legacy on demand (watch
+  Modrinth analytics; candidates: 1.21.1, 1.20.1). No full 1.17+ coverage.
+- Loaders: Fabric (done) + NeoForge and Forge for 26.x — next up.
+  Forge does publish for 26.x (e.g. `26.3-66.0.9`).
 
 ## Non-version work
 
