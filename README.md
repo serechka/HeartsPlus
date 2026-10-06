@@ -55,8 +55,8 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Health Indicators | ON | Master toggle for the whole mod |
 | Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
-| Show Behind Blocks | OFF | On = hearts stay visible through walls (depth-test-free second pass) |
-| Heart Textures | Current Pack | The active resource pack, or pull the built-in default-pack hearts |
+| Show Behind Blocks | ON | Off = walls hide the hearts; on = a dimmed see-through copy stays visible through them, like a name tag |
+| Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
 | Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
