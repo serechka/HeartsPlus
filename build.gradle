@@ -1,24 +1,18 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.neoforged.moddev' version "${moddev_version}"
 }
 
-// One jar covers the whole 26.x line (built against 26.2, verified on 26.1–26.3).
-version = "${project.mod_version}+26.x"
+// NeoForge build of HeartsPlus for Minecraft 26.x.
+version = "${project.mod_version}+neoforge"
 group = project.maven_group
 
 base {
 	archivesName = project.archives_base_name
 }
 
-repositories {
-	// ModMenu is distributed through the TerraformersMC maven.
-	maven {
-		name = 'TerraformersMC'
-		url = 'https://maven.terraformersmc.com/releases/'
-	}
-}
+neoForge {
+	version = project.neoforge_version
 
-loom {
 	mods {
 		"heartsplus" {
 			sourceSet sourceSets.main
@@ -26,22 +20,11 @@ loom {
 	}
 }
 
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	// Fabric API
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-	// ModMenu (optional at runtime, entrypoint is only used when present)
-	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
-}
-
 processResources {
 	def version = project.version
 	inputs.property "version", version
 
-	filesMatching("fabric.mod.json") {
+	filesMatching("META-INF/neoforge.mods.toml") {
 		expand "version": version
 	}
 }
