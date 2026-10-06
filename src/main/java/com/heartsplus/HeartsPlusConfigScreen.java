@@ -43,11 +43,11 @@ public class HeartsPlusConfigScreen extends Screen {
 		// line, so the textures toggle uses the generic builder.
 		addDrawableChild(CyclingButtonWidget.<Boolean>builder(
 				value -> value
-						? Text.translatable("option.heartsplus.textures.default")
-						: Text.translatable("option.heartsplus.textures.pack"))
+						? Text.translatable("option.heartsplus.textures.vanilla")
+						: Text.translatable("option.heartsplus.textures.current"))
 				.initially(HeartsPlusConfig.isVanillaTextures())
 				.build(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT,
-						Text.translatable("heartsplus.config.default_textures"),
+						Text.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
 		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
 				HeartsPlusConfig::setBlinkAnimation);
