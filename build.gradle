@@ -20,6 +20,23 @@ neoForge {
 			sourceSet sourceSets.main
 		}
 	}
+
+	unitTest {
+		// Wire the Minecraft/NeoForge classpath into the test source set:
+		// HeartType and the config read game classes (Identifier, Gson).
+		enable()
+		testedMod = mods.heartsplus
+	}
+}
+
+dependencies {
+	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
+	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test) {
+	useJUnitPlatform()
 }
 
 processResources {
