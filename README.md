@@ -88,6 +88,11 @@ Requires **JDK 25** (e.g. [Temurin](https://adoptium.net/)):
 The mod jar appears in `build/libs/`. CI builds every push; pushing a `v*` tag
 creates a GitHub release linking to the Modrinth downloads.
 
+For a quick in-game check, `./gradlew runClient` boots a dev client straight
+into a test world. In a solo world your own hearts are hidden by default
+(like vanilla name tags) — press **H**, enable **Show Above Yourself**, then
+**F5** to see them above your head.
+
 <details>
 <summary>Supported versions and branches</summary>
 
@@ -99,7 +104,7 @@ creates a GitHub release linking to the Modrinth downloads.
 | `1.21` | Fabric | 1.21.11 | legacy line |
 
 Older versions (1.20 – 1.21.10) and Forge are not planned — each Minecraft
-rendering era needs its own port; see the [roadmap](ROADMAP.md).
+rendering era needs its own port.
 
 </details>
 
