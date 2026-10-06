@@ -1,19 +1,23 @@
 package com.heartsplus.mixin;
 
+import com.heartsplus.render.BlinkTracker;
 import com.heartsplus.render.HealthHolder;
+import java.util.UUID;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
  * Attaches health data to the vanilla AvatarRenderState so the submit
- * phase can draw hearts without reaching back into the entity.
+ * phase can draw hearts without reaching back into the entity. The blink
+ * history itself is kept in {@link BlinkTracker} by UUID: render states are
+ * recycled between frames, which used to wipe state-stored history and
+ * silently killed the animation.
  */
 @Mixin(AvatarRenderState.class)
 public abstract class AvatarRenderStateMixin implements HealthHolder {
 	@Unique
-	private static final int heartsplus$BLINK_TICKS = 15;
-
+	private UUID heartsplus$playerUuid;
 	@Unique
 	private float heartsplus$health;
 	@Unique
@@ -28,12 +32,6 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 	private boolean heartsplus$withered;
 	@Unique
 	private boolean heartsplus$visibleArmour;
-	@Unique
-	private float heartsplus$lastHealth = Float.NaN;
-	@Unique
-	private float heartsplus$blinkOldHealth;
-	@Unique
-	private int heartsplus$blinkEndTick = Integer.MIN_VALUE;
 
 	@Override
 	@Unique
@@ -80,24 +78,20 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 	@Override
 	@Unique
 	public float heartsplus$getBlinkOldHealth() {
-		return this.heartsplus$blinkOldHealth;
+		return BlinkTracker.getBlinkOldHealth(this.heartsplus$playerUuid);
 	}
 
 	@Override
 	@Unique
 	public int heartsplus$getBlinkEndTick() {
-		return this.heartsplus$blinkEndTick;
+		return BlinkTracker.getBlinkEndTick(this.heartsplus$playerUuid);
 	}
 
 	@Override
 	@Unique
-	public void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
+	public void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
 			boolean poisoned, boolean withered, boolean hasVisibleArmour, int tick) {
-		if (!Float.isNaN(this.heartsplus$lastHealth) && health < this.heartsplus$lastHealth - 0.01F) {
-			this.heartsplus$blinkOldHealth = this.heartsplus$lastHealth;
-			this.heartsplus$blinkEndTick = tick + heartsplus$BLINK_TICKS;
-		}
-		this.heartsplus$lastHealth = health;
+		this.heartsplus$playerUuid = playerId;
 		this.heartsplus$health = health;
 		this.heartsplus$maxHealth = maxHealth;
 		this.heartsplus$absorption = absorption;
@@ -105,5 +99,6 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
 		this.heartsplus$visibleArmour = hasVisibleArmour;
+		BlinkTracker.update(playerId, health, tick);
 	}
 }

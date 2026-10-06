@@ -56,10 +56,10 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
 | Show Sneaking | OFF | Off = sneaking players get no hearts (like their name tag) |
-| Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
+| Heart Textures | Current Pack | The active resource pack, or pull the built-in default-pack hearts |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
-| Vertical Offset | 0 | Fine-tune height, −20 – +40 |
+| Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
 
@@ -98,7 +98,7 @@ Older versions (1.20 – 1.21.10) and the NeoForge/Forge loaders are on the
 - **[PlayerHealthIndicators](https://github.com/Gaider10/PlayerHealthIndicators)** by Gaider10 (MIT) — the original inspiration.
   The heart layout math (rows of ten, row compression, halves) was adapted from it;
   all HeartsPlus code was written from scratch for the Minecraft 26.x rendering system.
-- Vanilla heart sprites used by the built-in texture mode come from Minecraft itself.
+- Default-texture mode loads its heart sprites straight from Minecraft's own default resource pack.
 
 ## 📄 License
 
