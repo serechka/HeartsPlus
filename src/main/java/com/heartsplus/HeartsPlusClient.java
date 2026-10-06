@@ -1,5 +1,6 @@
 package com.heartsplus;
 
+import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -10,6 +11,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * NeoForge client bootstrap: loads the config, registers key mappings and
@@ -22,11 +25,14 @@ public class HeartsPlusClient {
 	private static final int KEY_UNKNOWN = -1;
 	private static final int KEY_H = 72;
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
 	private static KeyMapping toggleRenderingKey;
 	private static KeyMapping openSettingsKey;
+	private static boolean texturesWarmedUp;
 
 	public HeartsPlusClient() {
 		HeartsPlusConfig.load();
+		LOGGER.info("HeartsPlus client initialized");
 		NeoForge.EVENT_BUS.register(this);
 	}
 
@@ -43,6 +49,12 @@ public class HeartsPlusClient {
 	@SubscribeEvent
 	public void onClientTick(ClientTickEvent.Post event) {
 		Minecraft client = Minecraft.getInstance();
+		// First tick: register and upload the bundled heart textures before
+		// any frame tries to draw them (lazy mid-frame uploads stay blank).
+		if (!texturesWarmedUp) {
+			texturesWarmedUp = true;
+			HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
+		}
 		while (toggleRenderingKey.consumeClick()) {
 			HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());
 			if (client.player != null) {
