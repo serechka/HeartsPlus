@@ -46,6 +46,7 @@ public final class HeartsPlusConfig {
 	private boolean showInvisiblePlayers = false;
 	private boolean showBehindBlocks = false;
 	private boolean vanillaTextures = false;
+	private boolean blinkAnimation = true;
 	private int heartOffset = DEFAULT_HEART_OFFSET;
 	private double scale = 1.0;
 	private double renderDistanceBlocks = 128.0;
@@ -92,6 +93,20 @@ public final class HeartsPlusConfig {
 
 	public static void setShowBehindBlocks(boolean value) {
 		instance.showBehindBlocks = value;
+		save();
+	}
+
+	/**
+	 * Drives the vanilla-style damage blink above players' heads (the flash
+	 * and the pre-drop highlight). When false the bar always shows the current
+	 * health with no flashing.
+	 */
+	public static boolean isBlinkAnimationEnabled() {
+		return instance.blinkAnimation;
+	}
+
+	public static void setBlinkAnimation(boolean value) {
+		instance.blinkAnimation = value;
 		save();
 	}
 

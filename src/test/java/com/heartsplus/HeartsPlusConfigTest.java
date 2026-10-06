@@ -34,6 +34,7 @@ class HeartsPlusConfigTest {
 
 		assertTrue(json.contains("\"modEnabled\": true"), json);
 		assertTrue(json.contains("\"showBehindBlocks\": false"), json);
+		assertTrue(json.contains("\"blinkAnimation\": true"), json);
 		assertTrue(json.contains("\"heartOffset\": 0"), json);
 		assertFalse(json.contains("showSneakingPlayers"), json);
 	}

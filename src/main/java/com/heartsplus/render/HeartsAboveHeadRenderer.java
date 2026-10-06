@@ -192,8 +192,13 @@ public final class HeartsAboveHeadRenderer {
 
 		int light = state.lightCoords;
 		int blinkFrom = layout.heartsRed();
-		int blinkTo = layout.blinkUpperBound((int) Math.floor(state.ageInTicks), health.heartsplus$getBlinkEndTick(),
-				health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth());
+		// With the animation disabled blinkTo stays at blinkFrom, so the blink
+		// passes are skipped entirely and their blinking sprites are never
+		// resolved (the resolve calls sit inside the `blinkTo > blinkFrom` gate).
+		int blinkTo = HeartsPlusConfig.isBlinkAnimationEnabled()
+				? layout.blinkUpperBound((int) Math.floor(state.ageInTicks), health.heartsplus$getBlinkEndTick(),
+						health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth())
+				: blinkFrom;
 
 		// Sprites are resolved lazily per pass so empty passes (no blinking, no
 		// absorption) cost nothing at all. Each family sits on its own z layer:

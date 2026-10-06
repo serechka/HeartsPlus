@@ -8,6 +8,7 @@
   "heartsplus.config.default_textures": "デフォルトのテクスチャ",
   "option.heartsplus.textures.pack": "リソースパックから",
   "option.heartsplus.textures.default": "デフォルト",
+  "heartsplus.config.animation": "アニメーション",
   "heartsplus.config.scale": "サイズ：%s",
   "heartsplus.config.render_distance": "距離：%s",
   "heartsplus.config.heart_offset": "高さ：%s",

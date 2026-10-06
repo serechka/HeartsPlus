@@ -8,6 +8,7 @@
   "heartsplus.config.default_textures": "默认纹理",
   "option.heartsplus.textures.pack": "来自资源包",
   "option.heartsplus.textures.default": "默认",
+  "heartsplus.config.animation": "动画",
   "heartsplus.config.scale": "缩放：%s",
   "heartsplus.config.render_distance": "距离：%s",
   "heartsplus.config.heart_offset": "高度：%s",

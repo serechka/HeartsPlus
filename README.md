@@ -23,7 +23,7 @@ Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 ## Features
 
 - **Vanilla-style hearts** above every player — containers, halves and absorption hearts, exactly like your own HUD
-- **Damage blink** — hearts flash after damage with the vanilla HUD animation, including the pre-drop highlight
+- **Damage blink** — hearts flash after damage with the vanilla HUD animation, including the pre-drop highlight (toggleable)
 - **Status variants** — poisoned, withered and frozen hearts, chosen with the same priority as the vanilla HUD
 - **Smart stacking** — long health bars wrap into rows of 10 and grow upward, never covering nametags
 - **Texture source toggle** — take hearts from your active resource pack, or pull them from Minecraft's built-in default pack
@@ -63,6 +63,7 @@ Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press **H** anywhere
 | Show Above Yourself | OFF | Draw hearts above your own player (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
 | Show Behind Blocks | OFF | On = hearts stay visible through walls (depth-test-free second pass) |
+| Animation | ON | Damage-blink flash above a player after they take damage |
 | Heart Textures | Current Pack | The active resource pack, or pull the built-in default-pack hearts |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |

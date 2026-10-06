@@ -8,6 +8,7 @@
   "heartsplus.config.default_textures": "Texturas predeterminadas",
   "option.heartsplus.textures.pack": "Del paquete de recursos",
   "option.heartsplus.textures.default": "Predeterminadas",
+  "heartsplus.config.animation": "Animación",
   "heartsplus.config.scale": "Escala: %s",
   "heartsplus.config.render_distance": "Distancia: %s",
   "heartsplus.config.heart_offset": "Altura: %s",

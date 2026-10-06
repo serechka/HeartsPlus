@@ -8,6 +8,7 @@
   "heartsplus.config.default_textures": "Texture predefinite",
   "option.heartsplus.textures.pack": "Dal resource pack",
   "option.heartsplus.textures.default": "Predefinite",
+  "heartsplus.config.animation": "Animazione",
   "heartsplus.config.scale": "Scala: %s",
   "heartsplus.config.render_distance": "Distanza: %s",
   "heartsplus.config.heart_offset": "Altezza: %s",
