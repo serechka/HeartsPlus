@@ -34,10 +34,7 @@ Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 
 ## Screenshot
 
-Drop screenshots into the [`screenshots/`](screenshots/) folder and reference
-them here once available:
-
-<!-- ![HeartsPlus in action](screenshots/26.2-pvp.png) -->
+![HeartsPlus in action](screenshots/26.x-hearts.png)
 
 ## Installation
 
