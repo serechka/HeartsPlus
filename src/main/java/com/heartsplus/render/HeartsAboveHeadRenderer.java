@@ -337,13 +337,15 @@ public final class HeartsAboveHeadRenderer {
 		float endY = yTop + HEART_SIZE;
 		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
 		// element must be set or the BufferBuilder validation rejects the vertex.
+		// The pipeline culls back faces, so the winding must match vanilla text
+		// quads (BakedSheetGlyph): top-left, bottom-left, bottom-right, top-right.
 		vertices.addVertex(pose, x, yTop, 0.0F).setUv(sprite.u0(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
+		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
 		vertices.addVertex(pose, endX, endY, 0.0F).setUv(sprite.u1(), sprite.v1())
 				.setLight(light).setColor(255, 255, 255, 255);
-		vertices.addVertex(pose, x, endY, 0.0F).setUv(sprite.u0(), sprite.v1())
+		vertices.addVertex(pose, endX, yTop, 0.0F).setUv(sprite.u1(), sprite.v0())
 				.setLight(light).setColor(255, 255, 255, 255);
 	}
 }
