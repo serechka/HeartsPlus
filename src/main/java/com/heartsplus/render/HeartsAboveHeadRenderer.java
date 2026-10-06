@@ -196,6 +196,10 @@ public final class HeartsAboveHeadRenderer {
 			reportedFirstHeart = true;
 			LOGGER.info("Hearts submitted above a player for the first time ({} hearts, texture {})",
 					layout.heartsTotal(), container.texture());
+			var player = Minecraft.getInstance().player;
+			if (player != null) {
+				player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("heartsplus.message.first_render"));
+			}
 		}
 	}
 

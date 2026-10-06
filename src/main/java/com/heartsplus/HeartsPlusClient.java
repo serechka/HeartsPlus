@@ -40,8 +40,8 @@ public class HeartsPlusClient {
 	public void registerKeyMappings(RegisterKeyMappingsEvent event) {
 		KeyMapping.Category category = KeyMapping.Category.register(
 				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
-		toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_H, category);
-		openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_UNKNOWN, category);
+		toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, category);
+		openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, category);
 		event.register(toggleRenderingKey);
 		event.register(openSettingsKey);
 	}

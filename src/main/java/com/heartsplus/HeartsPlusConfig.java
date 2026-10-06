@@ -30,21 +30,21 @@ public final class HeartsPlusConfig {
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
-	public boolean enabled = true;
+	public boolean modEnabled = true;
 	public boolean showOwnHearts = false;
 	public boolean showInvisiblePlayers = false;
 	public boolean showSneakingPlayers = false;
 	public boolean vanillaTextures = false;
 	public int heartOffset = 0;
 	public double scale = 1.0;
-	public double renderDistance = 64.0;
+	public double renderDistanceBlocks = 128.0;
 
 	public static boolean isEnabled() {
-		return instance.enabled;
+		return instance.modEnabled;
 	}
 
 	public static void setEnabled(boolean value) {
-		instance.enabled = value;
+		instance.modEnabled = value;
 		save();
 	}
 
@@ -113,11 +113,11 @@ public final class HeartsPlusConfig {
 	}
 
 	public static double getRenderDistance() {
-		return instance.renderDistance;
+		return instance.renderDistanceBlocks;
 	}
 
 	public static void setRenderDistance(double value) {
-		instance.renderDistance = sanitize(value, 64.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
+		instance.renderDistanceBlocks = sanitize(value, 128.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
 		save();
 	}
 
@@ -131,7 +131,7 @@ public final class HeartsPlusConfig {
 	}
 
 	static void setRenderDistanceSilently(double value) {
-		instance.renderDistance = sanitize(value, 64.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
+		instance.renderDistanceBlocks = sanitize(value, 128.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
 	}
 
 	static void setHeartOffsetSilently(int value) {
@@ -169,7 +169,7 @@ public final class HeartsPlusConfig {
 
 	private void clamp() {
 		scale = sanitize(scale, 1.0, MIN_SCALE, MAX_SCALE);
-		renderDistance = sanitize(renderDistance, 64.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
+		renderDistanceBlocks = sanitize(renderDistanceBlocks, 128.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
 		heartOffset = (int) sanitize(heartOffset, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 	}
 
