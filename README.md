@@ -62,11 +62,11 @@ Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press **H** anywhere
 | Show Hearts | ON | Master toggle for the whole mod |
 | Show Above Yourself | OFF | Draw hearts above your own player (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
-| Show Sneaking Players | OFF | Off = sneaking players get no hearts, just like their hidden name tag |
+| Show Behind Blocks | OFF | On = hearts stay visible through walls (depth-test-free second pass) |
 | Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
-| Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
+| Height Offset | −10 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
 

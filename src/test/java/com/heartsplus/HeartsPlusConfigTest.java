@@ -2,6 +2,7 @@ package com.heartsplus;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,11 +29,22 @@ class HeartsPlusConfigTest {
 	}
 
 	@Test
+	void defaultsMatchTheDocumentedValues() {
+		String json = HeartsPlusConfig.serialize(HeartsPlusConfig.parse("{}"));
+
+		assertTrue(json.contains("\"modEnabled\": true"), json);
+		assertTrue(json.contains("\"showBehindBlocks\": false"), json);
+		assertTrue(json.contains("\"heartOffset\": -10"), json);
+		assertFalse(json.contains("showSneakingPlayers"), json);
+	}
+
+	@Test
 	void roundTripPreservesLegalValues() {
 		String json = HeartsPlusConfig.serialize(HeartsPlusConfig.parse(
-				"{\"modEnabled\": false, \"scale\": 2.5, \"renderDistanceBlocks\": 64.0, \"heartOffset\": -5}"));
+				"{\"modEnabled\": false, \"showBehindBlocks\": true, \"scale\": 2.5, \"renderDistanceBlocks\": 64.0, \"heartOffset\": -5}"));
 
 		assertTrue(json.contains("\"modEnabled\": false"), json);
+		assertTrue(json.contains("\"showBehindBlocks\": true"), json);
 		assertTrue(json.contains("\"scale\": 2.5"), json);
 		assertTrue(json.contains("\"renderDistanceBlocks\": 64.0"), json);
 		assertTrue(json.contains("\"heartOffset\": -5"), json);

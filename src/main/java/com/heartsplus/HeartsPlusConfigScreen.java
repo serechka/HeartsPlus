@@ -41,7 +41,7 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(0, 0, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(0, 1, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(1, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
-		addToggle(1, 1, "heartsplus.config.show_sneaking", HeartsPlusConfig.isShowSneakingPlayers(), HeartsPlusConfig::setShowSneakingPlayers);
+		addToggle(1, 1, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(
 				Component.translatable("option.heartsplus.textures.vanilla"),

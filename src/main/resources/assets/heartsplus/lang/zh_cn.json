@@ -15,5 +15,5 @@
   "heartsplus.message.enabled": "生命值显示已开启",
   "heartsplus.message.disabled": "生命值显示已关闭",
   "heartsplus.config.show_invisible": "显示隐身",
-  "heartsplus.config.show_sneaking": "显示潜行"
+  "heartsplus.config.show_behind_blocks": "隔墙显示"
 }

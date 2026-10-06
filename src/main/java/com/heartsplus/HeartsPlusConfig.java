@@ -26,6 +26,8 @@ public final class HeartsPlusConfig {
 	public static final double MAX_RENDER_DISTANCE = 128.0;
 	public static final int MIN_HEART_OFFSET = -20;
 	public static final int MAX_HEART_OFFSET = 40;
+	/** Default bar lift above the fixed anchor, in GUI pixels ("ideal height" reported by playtesting). */
+	public static final int DEFAULT_HEART_OFFSET = -10;
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
@@ -34,9 +36,9 @@ public final class HeartsPlusConfig {
 	private boolean modEnabled = true;
 	private boolean showOwnHearts = false;
 	private boolean showInvisiblePlayers = false;
-	private boolean showSneakingPlayers = false;
+	private boolean showBehindBlocks = false;
 	private boolean vanillaTextures = false;
-	private int heartOffset = 0;
+	private int heartOffset = DEFAULT_HEART_OFFSET;
 	private double scale = 1.0;
 	private double renderDistanceBlocks = 128.0;
 
@@ -71,13 +73,17 @@ public final class HeartsPlusConfig {
 		save();
 	}
 
-	/** When false (default) sneaking players get no hearts, like their name tag; when true, hearts stay visible. */
-	public static boolean isShowSneakingPlayers() {
-		return instance.showSneakingPlayers;
+	/**
+	 * When false (default) hearts are hidden behind walls like normal
+	 * geometry; when true, every pass is also drawn with a depth-test-free
+	 * see-through render type so hearts stay visible through blocks.
+	 */
+	public static boolean isShowBehindBlocks() {
+		return instance.showBehindBlocks;
 	}
 
-	public static void setShowSneakingPlayers(boolean value) {
-		instance.showSneakingPlayers = value;
+	public static void setShowBehindBlocks(boolean value) {
+		instance.showBehindBlocks = value;
 		save();
 	}
 
@@ -100,7 +106,7 @@ public final class HeartsPlusConfig {
 	}
 
 	public static void setHeartOffset(int value) {
-		instance.heartOffset = (int) sanitize(value, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		instance.heartOffset = (int) sanitize(value, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 		save();
 	}
 
@@ -136,7 +142,7 @@ public final class HeartsPlusConfig {
 	}
 
 	static void setHeartOffsetSilently(int value) {
-		instance.heartOffset = (int) sanitize(value, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		instance.heartOffset = (int) sanitize(value, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 	}
 
 	public static void load() {
@@ -184,7 +190,7 @@ public final class HeartsPlusConfig {
 	private void clamp() {
 		scale = sanitize(scale, 1.0, MIN_SCALE, MAX_SCALE);
 		renderDistanceBlocks = sanitize(renderDistanceBlocks, 128.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
-		heartOffset = (int) sanitize(heartOffset, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		heartOffset = (int) sanitize(heartOffset, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 	}
 
 	/**
