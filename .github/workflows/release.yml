@@ -45,7 +45,7 @@ jobs:
           modrinth-id: ${{ secrets.MODRINTH_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           files: build/libs/heartsplus-*.jar!(*-sources.jar)
-          name: HeartsPlus ${{ github.ref_name }}
+          name: HeartsPlus for Minecraft 1.21.11 (${{ github.ref_name }})
           version-type: release
           loaders: fabric
           game-versions: 1.21.11

@@ -22,8 +22,8 @@ public interface HealthHolder {
 
 	boolean heartsplus$isFrozen();
 
-	/** True while the player wears any armour or holds any item; makes hearts on invisible players "fair". */
-	boolean heartsplus$hasVisibleGear();
+	/** True while the player wears any armour piece; armour betrays invisible players. */
+	boolean heartsplus$hasVisibleArmour();
 
 	/** Health the player had before the latest drop; hearts up to this value blink. */
 	float heartsplus$getBlinkOldHealth();
@@ -32,5 +32,5 @@ public interface HealthHolder {
 	int heartsplus$getBlinkEndTick();
 
 	void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleGear, int tick);
+			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour, int tick);
 }

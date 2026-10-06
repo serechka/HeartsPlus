@@ -61,9 +61,10 @@ public final class HeartsAboveHeadRenderer {
 		if (state.squaredDistanceToCamera > maxDistance * maxDistance) {
 			return;
 		}
-		if (state.invisibleToPlayer && HeartsPlusConfig.isHideWhenInvisible() && !health.heartsplus$hasVisibleGear()) {
-			// Invisible players only give themselves away through visible
-			// armour or a held item, which feels fair in PvP.
+		if (state.invisibleToPlayer
+				&& !(HeartsPlusConfig.isShowInvisiblePlayers() && health.heartsplus$hasVisibleArmour())) {
+			// Hidden by default; even when enabled, armour is the only thing
+			// that betrays an invisible player.
 			return;
 		}
 		if (HeartsPlusConfig.isHideWhenSneaking() && state.sneaking) {

@@ -39,7 +39,7 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(left, y + ROW_STEP, "heartsplus.config.absorption", HeartsPlusConfig.isShowAbsorption(), HeartsPlusConfig::setShowAbsorption);
 		addToggle(right, y + ROW_STEP, "heartsplus.config.stack", HeartsPlusConfig.isStackHearts(), HeartsPlusConfig::setStackHearts);
-		addToggle(left, y + 2 * ROW_STEP, "heartsplus.config.hide_invisible", HeartsPlusConfig.isHideWhenInvisible(), HeartsPlusConfig::setHideWhenInvisible);
+		addToggle(left, y + 2 * ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
 		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.hide_sneaking", HeartsPlusConfig.isHideWhenSneaking(), HeartsPlusConfig::setHideWhenSneaking);
 		addDrawableChild(CyclingButtonWidget.onOffBuilder(
 				Text.translatable("option.heartsplus.textures.vanilla"),
