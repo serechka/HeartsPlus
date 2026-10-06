@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "Health indicators enabled",
   "heartsplus.message.disabled": "Health indicators disabled",
   "heartsplus.config.show_invisible": "Show Invisible",
-  "heartsplus.config.show_sneaking": "Show Sneaking",
-  "heartsplus.message.first_render": "HeartsPlus: hearts are now rendering"
+  "heartsplus.config.show_behind_blocks": "Show Behind Blocks"
 }

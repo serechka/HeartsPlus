@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "Indicadores de vida activados",
   "heartsplus.message.disabled": "Indicadores de vida desactivados",
   "heartsplus.config.show_invisible": "Mostrar invisibles",
-  "heartsplus.config.show_sneaking": "Mostrar agachados",
-  "heartsplus.message.first_render": "HeartsPlus: los corazones ya se muestran"
+  "heartsplus.config.show_behind_blocks": "Mostrar a través de bloques"
 }

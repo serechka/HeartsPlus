@@ -2,14 +2,12 @@ package com.heartsplus;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.neoforged.fml.loading.FMLPaths;
-
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import net.neoforged.fml.loading.FMLPaths;
 
 /**
  * Client-side configuration. Every field is exposed through a pair of
@@ -27,17 +25,21 @@ public final class HeartsPlusConfig {
 	public static final double MAX_RENDER_DISTANCE = 128.0;
 	public static final int MIN_HEART_OFFSET = -20;
 	public static final int MAX_HEART_OFFSET = 40;
+	/** Default bar lift above the fixed anchor, in GUI pixels ("ideal height" reported by playtesting). */
+	public static final int DEFAULT_HEART_OFFSET = -10;
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
-	public boolean modEnabled = true;
-	public boolean showOwnHearts = false;
-	public boolean showInvisiblePlayers = false;
-	public boolean showSneakingPlayers = false;
-	public boolean vanillaTextures = false;
-	public int heartOffset = 0;
-	public double scale = 1.0;
-	public double renderDistanceBlocks = 128.0;
+	// Gson writes these directly; all mutations go through the clamped static
+	// accessors below, so nothing can bypass validation.
+	private boolean modEnabled = true;
+	private boolean showOwnHearts = false;
+	private boolean showInvisiblePlayers = false;
+	private boolean showBehindBlocks = false;
+	private boolean vanillaTextures = false;
+	private int heartOffset = DEFAULT_HEART_OFFSET;
+	private double scale = 1.0;
+	private double renderDistanceBlocks = 128.0;
 
 	public static boolean isEnabled() {
 		return instance.modEnabled;
@@ -70,13 +72,17 @@ public final class HeartsPlusConfig {
 		save();
 	}
 
-	/** When false (default) sneaking players get no hearts, like their name tag; when true, hearts stay visible. */
-	public static boolean isShowSneakingPlayers() {
-		return instance.showSneakingPlayers;
+	/**
+	 * When false (default) hearts are hidden behind walls like normal
+	 * geometry; when true, every pass is also drawn with a depth-test-free
+	 * see-through render type so hearts stay visible through blocks.
+	 */
+	public static boolean isShowBehindBlocks() {
+		return instance.showBehindBlocks;
 	}
 
-	public static void setShowSneakingPlayers(boolean value) {
-		instance.showSneakingPlayers = value;
+	public static void setShowBehindBlocks(boolean value) {
+		instance.showBehindBlocks = value;
 		save();
 	}
 
@@ -99,7 +105,7 @@ public final class HeartsPlusConfig {
 	}
 
 	public static void setHeartOffset(int value) {
-		instance.heartOffset = (int) sanitize(value, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		instance.heartOffset = (int) sanitize(value, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 		save();
 	}
 
@@ -135,7 +141,7 @@ public final class HeartsPlusConfig {
 	}
 
 	static void setHeartOffsetSilently(int value) {
-		instance.heartOffset = (int) sanitize(value, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		instance.heartOffset = (int) sanitize(value, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 	}
 
 	public static void load() {
@@ -144,15 +150,28 @@ public final class HeartsPlusConfig {
 			save();
 			return;
 		}
-		try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-			HeartsPlusConfig read = GSON.fromJson(reader, HeartsPlusConfig.class);
+		try {
+			HeartsPlusConfig read = parse(Files.readString(path, StandardCharsets.UTF_8));
 			if (read != null) {
-				read.clamp();
 				instance = read;
 			}
 		} catch (IOException | com.google.gson.JsonParseException e) {
 			HeartsPlusLog.LOGGER.error("Failed to read config file {}", path, e);
 		}
+	}
+
+	/** Parses JSON into a clamped config, or null for empty input; package-private for tests. */
+	static HeartsPlusConfig parse(String json) {
+		HeartsPlusConfig read = GSON.fromJson(json, HeartsPlusConfig.class);
+		if (read != null) {
+			read.clamp();
+		}
+		return read;
+	}
+
+	/** Serializes to the on-disk JSON form; package-private for tests. */
+	static String serialize(HeartsPlusConfig config) {
+		return GSON.toJson(config);
 	}
 
 	public static void save() {
@@ -170,7 +189,7 @@ public final class HeartsPlusConfig {
 	private void clamp() {
 		scale = sanitize(scale, 1.0, MIN_SCALE, MAX_SCALE);
 		renderDistanceBlocks = sanitize(renderDistanceBlocks, 128.0, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE);
-		heartOffset = (int) sanitize(heartOffset, 0, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		heartOffset = (int) sanitize(heartOffset, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
 	}
 
 	/**

@@ -15,6 +15,5 @@
   "heartsplus.message.enabled": "체력 표시가 켜졌습니다",
   "heartsplus.message.disabled": "체력 표시가 꺼졌습니다",
   "heartsplus.config.show_invisible": "투명 표시",
-  "heartsplus.config.show_sneaking": "웅크린 플레이어 표시",
-  "heartsplus.message.first_render": "HeartsPlus: 하트가 표시되고 있습니다"
+  "heartsplus.config.show_behind_blocks": "블록 뒤에 표시"
 }
