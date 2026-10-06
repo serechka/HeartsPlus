@@ -33,7 +33,7 @@ class HeartsPlusConfigTest {
 		String json = HeartsPlusConfig.serialize(HeartsPlusConfig.parse("{}"));
 
 		assertTrue(json.contains("\"modEnabled\": true"), json);
-		assertTrue(json.contains("\"showBehindBlocks\": false"), json);
+		assertTrue(json.contains("\"showBehindBlocks\": true"), json);
 		assertTrue(json.contains("\"blinkAnimation\": true"), json);
 		assertTrue(json.contains("\"heartOffset\": 0"), json);
 		assertFalse(json.contains("showSneakingPlayers"), json);
