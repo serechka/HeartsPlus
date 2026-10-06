@@ -12,7 +12,6 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * NeoForge client bootstrap: loads the config, registers key mappings and
@@ -25,7 +24,7 @@ public class HeartsPlusClient {
 	private static final int KEY_UNKNOWN = -1;
 	private static final int KEY_H = 72;
 
-	private static final Logger LOGGER = LoggerFactory.getLogger(HeartsPlus.class);
+	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
 	private static KeyMapping toggleRenderingKey;
 	private static KeyMapping openSettingsKey;
 
