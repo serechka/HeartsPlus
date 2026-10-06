@@ -5,9 +5,10 @@ import net.minecraft.util.Identifier;
 /**
  * Heart families mirroring vanilla InGameHud.HeartType, including the blinking
  * variants used by the damage-flash animation. Each family knows both its
- * GUI-atlas sprites (follow the active resource pack) and copies of the
- * vanilla textures bundled with the mod, so the player can pin the look to
- * the default textures regardless of any installed pack.
+ * GUI-atlas sprites (follow the active resource pack) and the plain sprite
+ * files inside Minecraft's built-in default resource pack, so the player can
+ * pin the look to the unmodified default textures no matter which packs are
+ * stacked on top.
  */
 public enum HeartType {
 	CONTAINER("container", "container", "container_blinking", "container_blinking"),
@@ -22,7 +23,7 @@ public enum HeartType {
 	public final Identifier atlasHalf;
 	public final Identifier atlasFullBlinking;
 	public final Identifier atlasHalfBlinking;
-	/** Bundled copies of the default textures, used in vanilla mode. */
+	/** Heart sprite files inside Minecraft's built-in default resource pack. */
 	public final Identifier fileFull;
 	public final Identifier fileHalf;
 	public final Identifier fileFullBlinking;
@@ -33,13 +34,13 @@ public enum HeartType {
 		this.atlasHalf = Identifier.ofVanilla("hud/heart/" + half);
 		this.atlasFullBlinking = Identifier.ofVanilla("hud/heart/" + fullBlinking);
 		this.atlasHalfBlinking = Identifier.ofVanilla("hud/heart/" + halfBlinking);
-		this.fileFull = Identifier.of("heartsplus", "textures/vanilla/" + full + ".png");
-		this.fileHalf = Identifier.of("heartsplus", "textures/vanilla/" + half + ".png");
-		this.fileFullBlinking = Identifier.of("heartsplus", "textures/vanilla/" + fullBlinking + ".png");
-		this.fileHalfBlinking = Identifier.of("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
+		this.fileFull = Identifier.ofVanilla("textures/gui/sprites/hud/heart/" + full + ".png");
+		this.fileHalf = Identifier.ofVanilla("textures/gui/sprites/hud/heart/" + half + ".png");
+		this.fileFullBlinking = Identifier.ofVanilla("textures/gui/sprites/hud/heart/" + fullBlinking + ".png");
+		this.fileHalfBlinking = Identifier.ofVanilla("textures/gui/sprites/hud/heart/" + halfBlinking + ".png");
 	}
 
-	/** All bundled-file texture ids of this family, for warm-up registration. */
+	/** All default-pack sprite ids of this family, for warm-up registration. */
 	public Identifier[] fileTextures() {
 		return new Identifier[]{this.fileFull, this.fileHalf, this.fileFullBlinking, this.fileHalfBlinking};
 	}
