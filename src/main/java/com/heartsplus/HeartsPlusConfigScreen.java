@@ -44,10 +44,10 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(1, 1, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(
-				Component.translatable("option.heartsplus.textures.default"),
-				Component.translatable("option.heartsplus.textures.pack"),
+				Component.translatable("option.heartsplus.textures.vanilla"),
+				Component.translatable("option.heartsplus.textures.current"),
 				HeartsPlusConfig.isVanillaTextures())
-				.create(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.default_textures"),
+				.create(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value));
 		this.grid.addChild(textures, 2, 0);
 		addToggle(2, 1, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
