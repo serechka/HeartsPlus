@@ -1,6 +1,6 @@
 package com.heartsplus.render;
 
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 /**
  * Heart families mirroring vanilla InGameHud.HeartType, including the blinking
@@ -29,14 +29,14 @@ public enum HeartType {
 	public final Identifier fileHalfBlinking;
 
 	HeartType(String full, String half, String fullBlinking, String halfBlinking) {
-		this.atlasFull = Identifier.ofVanilla("hud/heart/" + full);
-		this.atlasHalf = Identifier.ofVanilla("hud/heart/" + half);
-		this.atlasFullBlinking = Identifier.ofVanilla("hud/heart/" + fullBlinking);
-		this.atlasHalfBlinking = Identifier.ofVanilla("hud/heart/" + halfBlinking);
-		this.fileFull = Identifier.of("heartsplus", "textures/vanilla/" + full + ".png");
-		this.fileHalf = Identifier.of("heartsplus", "textures/vanilla/" + half + ".png");
-		this.fileFullBlinking = Identifier.of("heartsplus", "textures/vanilla/" + fullBlinking + ".png");
-		this.fileHalfBlinking = Identifier.of("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
+		this.atlasFull = Identifier.withDefaultNamespace("hud/heart/" + full);
+		this.atlasHalf = Identifier.withDefaultNamespace("hud/heart/" + half);
+		this.atlasFullBlinking = Identifier.withDefaultNamespace("hud/heart/" + fullBlinking);
+		this.atlasHalfBlinking = Identifier.withDefaultNamespace("hud/heart/" + halfBlinking);
+		this.fileFull = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + full + ".png");
+		this.fileHalf = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + half + ".png");
+		this.fileFullBlinking = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + fullBlinking + ".png");
+		this.fileHalfBlinking = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
 	}
 
 	/** All bundled-file texture ids of this family, for warm-up registration. */

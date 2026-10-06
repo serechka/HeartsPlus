@@ -1,0 +1,32 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/serechka/HeartsPlus/issues"
+
+[[mods]]
+modId = "heartsplus"
+version = "${version}"
+displayName = "HeartsPlus"
+authors = "serechka"
+description = '''
+Displays player health as vanilla hearts above players' heads. Fully configurable, client-side only.
+'''
+logoFile = "assets/heartsplus/icon.png"
+displayURL = "https://modrinth.com/mod/heartsplus"
+
+[[mixins]]
+config = "heartsplus.mixins.json"
+
+[[dependencies.heartsplus]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.11,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.heartsplus]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.11]"
+ordering = "NONE"
+side = "CLIENT"

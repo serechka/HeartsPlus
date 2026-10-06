@@ -1,7 +1,8 @@
 package com.heartsplus.render;
 
 /**
- * Duck-typed interface injected onto {@code PlayerEntityRenderState} by mixin.
+ * Duck-typed interface injected onto the player render state
+ * ({@code AvatarRenderState} in Mojang mappings) by mixin.
  * The render state itself carries no health data, so EntityRendererMixin
  * fills these values while the render state is being extracted from the entity.
  * The mixin also tracks recent health drops to drive the vanilla-style

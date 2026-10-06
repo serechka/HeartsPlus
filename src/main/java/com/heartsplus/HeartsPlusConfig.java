@@ -2,7 +2,7 @@ package com.heartsplus;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -183,6 +183,6 @@ public final class HeartsPlusConfig {
 	}
 
 	private static Path configPath() {
-		return FabricLoader.getInstance().getConfigDir().resolve(HeartsPlus.CONFIG_FILE);
+		return FMLPaths.CONFIGDIR.get().resolve(HeartsPlus.CONFIG_FILE);
 	}
 }

@@ -1,16 +1,17 @@
 package com.heartsplus.mixin;
 
 import com.heartsplus.render.HealthHolder;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
- * Attaches health data to the vanilla PlayerEntityRenderState so the render
- * phase can draw hearts without reaching back into the entity.
+ * Attaches health data to the vanilla AvatarRenderState (the player render
+ * state, Mojang mappings) so the render phase can draw hearts without
+ * reaching back into the entity.
  */
-@Mixin(PlayerEntityRenderState.class)
-public abstract class PlayerEntityRenderStateMixin implements HealthHolder {
+@Mixin(AvatarRenderState.class)
+public abstract class AvatarRenderStateMixin implements HealthHolder {
 	@Unique
 	private static final int heartsplus$BLINK_TICKS = 15;
 

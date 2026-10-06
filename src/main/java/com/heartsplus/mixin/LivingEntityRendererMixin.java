@@ -2,32 +2,32 @@ package com.heartsplus.mixin;
 
 import com.heartsplus.render.HealthHolder;
 import com.heartsplus.render.HeartsAboveHeadRenderer;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.entity.LivingEntityRenderer;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.render.state.CameraRenderState;
-import net.minecraft.client.util.math.MatrixStack;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Draws the heart bar once the living entity itself has been rendered.
- * Only player render states get hearts.
+ * Draws the heart bar once the living entity itself has been submitted.
+ * Only avatar render states (players and player-like entities) get hearts.
  */
 @Mixin(LivingEntityRenderer.class)
 public abstract class LivingEntityRendererMixin {
 	@Inject(
-			method = "render(Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V",
+			method = "submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/CameraRenderState;)V",
 			at = @At("RETURN")
 	)
-	private void heartsplus$renderHearts(LivingEntityRenderState state, MatrixStack matrices,
-			OrderedRenderCommandQueue queue, CameraRenderState cameraState, CallbackInfo ci) {
-		if (state instanceof PlayerEntityRenderState playerState) {
-			HealthHolder health = (HealthHolder) (Object) playerState;
-			HeartsAboveHeadRenderer.render(playerState, health, matrices, queue, cameraState);
+	private void heartsplus$renderHearts(LivingEntityRenderState state, PoseStack poseStack,
+			SubmitNodeCollector collector, CameraRenderState cameraState, CallbackInfo ci) {
+		if (state instanceof AvatarRenderState avatarState) {
+			HealthHolder health = (HealthHolder) (Object) avatarState;
+			HeartsAboveHeadRenderer.render(avatarState, health, poseStack, collector, cameraState);
 		}
 	}
 }
