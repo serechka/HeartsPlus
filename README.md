@@ -87,8 +87,10 @@ creates a GitHub release and publishes to Modrinth automatically.
 |---|---|---|
 | `main` | 26.1 – 26.3 | actively developed |
 | `1.21` | 1.21.11 | legacy line |
+| `1.21.2` | 1.21.2 – 1.21.3 | legacy line (Fabric) |
+| `neoforge-1.21.2` | 1.21.2 – 1.21.3 | legacy line (NeoForge) |
 
-Older versions (1.20 – 1.21.10) and the NeoForge/Forge loaders are on the
+Other versions (1.20 – 1.21.1, 1.21.4 – 1.21.10) and the Forge loader are on the
 [roadmap](ROADMAP.md) — each Minecraft rendering era needs its own port.
 
 </details>

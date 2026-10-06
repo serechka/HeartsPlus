@@ -4,14 +4,13 @@ import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
@@ -27,6 +26,11 @@ public class HeartsPlusClient {
 	/** GLFW key codes, inlined so the mod does not depend on the LWJGL glfw package. */
 	private static final int KEY_UNKNOWN = -1;
 	private static final int KEY_H = 72;
+	/**
+	 * Keybind category; in this stretch it is a plain string that doubles as
+	 * the translation key (no category registry yet).
+	 */
+	private static final String KEY_CATEGORY = "key.category.heartsplus.main";
 
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
 	private static KeyMapping toggleRenderingKey;
@@ -48,11 +52,8 @@ public class HeartsPlusClient {
 	static final class KeyMappingListener {
 		@SubscribeEvent
 		public void registerKeyMappings(RegisterKeyMappingsEvent event) {
-			KeyMapping.Category category = new KeyMapping.Category(
-					Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
-			event.registerCategory(category);
-			toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, category);
-			openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, category);
+			toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, KEY_CATEGORY);
+			openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, KEY_CATEGORY);
 			event.register(toggleRenderingKey);
 			event.register(openSettingsKey);
 		}
@@ -61,8 +62,9 @@ public class HeartsPlusClient {
 	/** Atlas sprites are re-stitched on resource reloads and their UV coordinates move, so the cache must be dropped. */
 	static final class ResourceReloadListener {
 		@SubscribeEvent
-		public void registerReloadListeners(AddClientReloadListenersEvent event) {
-			event.addListener(Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "atlas_sprite_cache"),
+		public void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+			// This stretch registers plain listeners: there is no per-listener id yet.
+			event.registerReloadListener(
 					(ResourceManagerReloadListener) resourceManager -> HeartsAboveHeadRenderer.invalidateAtlasSprites());
 		}
 	}

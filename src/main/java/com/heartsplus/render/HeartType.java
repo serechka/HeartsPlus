@@ -1,6 +1,6 @@
 package com.heartsplus.render;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Heart families mirroring vanilla InGameHud.HeartType, including the blinking
@@ -18,30 +18,30 @@ public enum HeartType {
 	ABSORBING("absorbing_full", "absorbing_half", "absorbing_full_blinking", "absorbing_half_blinking");
 
 	/** Sprites inside the vanilla GUI atlas ({@code textures/atlas/gui.png}). */
-	public final Identifier atlasFull;
-	public final Identifier atlasHalf;
-	public final Identifier atlasFullBlinking;
-	public final Identifier atlasHalfBlinking;
+	public final ResourceLocation atlasFull;
+	public final ResourceLocation atlasHalf;
+	public final ResourceLocation atlasFullBlinking;
+	public final ResourceLocation atlasHalfBlinking;
 	/** Bundled copies of the default textures, used in vanilla mode. */
-	public final Identifier fileFull;
-	public final Identifier fileHalf;
-	public final Identifier fileFullBlinking;
-	public final Identifier fileHalfBlinking;
+	public final ResourceLocation fileFull;
+	public final ResourceLocation fileHalf;
+	public final ResourceLocation fileFullBlinking;
+	public final ResourceLocation fileHalfBlinking;
 
 	HeartType(String full, String half, String fullBlinking, String halfBlinking) {
-		this.atlasFull = Identifier.withDefaultNamespace("hud/heart/" + full);
-		this.atlasHalf = Identifier.withDefaultNamespace("hud/heart/" + half);
-		this.atlasFullBlinking = Identifier.withDefaultNamespace("hud/heart/" + fullBlinking);
-		this.atlasHalfBlinking = Identifier.withDefaultNamespace("hud/heart/" + halfBlinking);
-		this.fileFull = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + full + ".png");
-		this.fileHalf = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + half + ".png");
-		this.fileFullBlinking = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + fullBlinking + ".png");
-		this.fileHalfBlinking = Identifier.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
+		this.atlasFull = ResourceLocation.withDefaultNamespace("hud/heart/" + full);
+		this.atlasHalf = ResourceLocation.withDefaultNamespace("hud/heart/" + half);
+		this.atlasFullBlinking = ResourceLocation.withDefaultNamespace("hud/heart/" + fullBlinking);
+		this.atlasHalfBlinking = ResourceLocation.withDefaultNamespace("hud/heart/" + halfBlinking);
+		this.fileFull = ResourceLocation.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + full + ".png");
+		this.fileHalf = ResourceLocation.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + half + ".png");
+		this.fileFullBlinking = ResourceLocation.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + fullBlinking + ".png");
+		this.fileHalfBlinking = ResourceLocation.fromNamespaceAndPath("heartsplus", "textures/vanilla/" + halfBlinking + ".png");
 	}
 
 	/** All bundled-file texture ids of this family, for warm-up registration. */
-	public Identifier[] fileTextures() {
-		return new Identifier[]{this.fileFull, this.fileHalf, this.fileFullBlinking, this.fileHalfBlinking};
+	public ResourceLocation[] fileTextures() {
+		return new ResourceLocation[]{this.fileFull, this.fileHalf, this.fileFullBlinking, this.fileHalfBlinking};
 	}
 
 	/**
