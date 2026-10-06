@@ -89,9 +89,10 @@ The mod jar appears in `build/libs/`. CI builds every push; pushing a `v*` tag
 creates a GitHub release linking to the Modrinth downloads.
 
 For a quick in-game check, `./gradlew runClient` boots a dev client straight
-into a test world. In a solo world your own hearts are hidden by default
-(like vanilla name tags) — press **H**, enable **Show Above Yourself**, then
-**F5** to see them above your head.
+into a test world (create a world named `New World` once if your dev
+environment doesn't have it yet). In a solo world your own hearts are hidden
+by default (like vanilla name tags) — press **H**, enable **Show on Self**,
+then **F5** to see them above your head.
 
 <details>
 <summary>Supported versions and branches</summary>
