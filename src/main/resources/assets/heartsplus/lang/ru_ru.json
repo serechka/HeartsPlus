@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "Включить/выключить индикаторы здоровья",
 	"key.heartsplus.settings": "Открыть настройки HeartsPlus",
 	"heartsplus.config.title": "Настройки HeartsPlus",
-	"heartsplus.config.enabled": "Индикаторы",
-	"heartsplus.config.show_own": "Свой игрок",
-	"heartsplus.config.absorption": "Поглощение",
-	"heartsplus.config.stack": "Ряды по 10",
-	"heartsplus.config.hide_sneaking": "Скрывать крадущихся",
+	"heartsplus.config.enabled": "Показывать сердечки",
+	"heartsplus.config.show_own": "Показывать себе",
 	"heartsplus.config.textures": "Текстуры",
 	"option.heartsplus.textures.pack": "Из ресурспака",
 	"option.heartsplus.textures.vanilla": "Ванильные",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "Сбросить настройки",
 	"heartsplus.message.enabled": "Индикаторы здоровья включены",
 	"heartsplus.message.disabled": "Индикаторы здоровья выключены",
-	"heartsplus.config.show_invisible": "Показывать невидимых"
+	"heartsplus.config.show_invisible": "Показывать невидимых",
+	"heartsplus.config.show_sneaking": "Показывать крадущихся"
 }

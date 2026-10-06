@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "체력 표시 켜기/끄기",
 	"key.heartsplus.settings": "HeartsPlus 설정 열기",
 	"heartsplus.config.title": "HeartsPlus 설정",
-	"heartsplus.config.enabled": "표시",
-	"heartsplus.config.show_own": "자신",
-	"heartsplus.config.absorption": "흡수",
-	"heartsplus.config.stack": "10개 줄바꿈",
-	"heartsplus.config.hide_sneaking": "웅크림 숨기기",
+	"heartsplus.config.enabled": "하트 표시",
+	"heartsplus.config.show_own": "자신에게 표시",
 	"heartsplus.config.textures": "텍스처",
 	"option.heartsplus.textures.pack": "리소스 팩에서",
 	"option.heartsplus.textures.vanilla": "바닐라",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "기본값으로 초기화",
 	"heartsplus.message.enabled": "체력 표시가 켜졌습니다",
 	"heartsplus.message.disabled": "체력 표시가 꺼졌습니다",
-	"heartsplus.config.show_invisible": "투명 표시"
+	"heartsplus.config.show_invisible": "투명 표시",
+	"heartsplus.config.show_sneaking": "웅크린 플레이어 표시"
 }

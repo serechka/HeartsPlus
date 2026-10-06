@@ -2,8 +2,9 @@ plugins {
 	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
-// One jar covers the whole 26.x line (built against 26.2, verified on 26.1–26.3).
-version = "${project.mod_version}+26.x"
+// One jar covers the whole 26.x line (built against 26.2, verified on 26.1-26.3).
+// Jar naming: heartsplus-<version>-<mc>-<loader>.jar
+version = "${project.mod_version}-26.x-fabric"
 group = project.maven_group
 
 base {
@@ -50,7 +51,6 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(25)
 	}
-	withSourcesJar()
 
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25

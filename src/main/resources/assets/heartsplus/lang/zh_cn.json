@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "开关生命值显示",
 	"key.heartsplus.settings": "打开 HeartsPlus 设置",
 	"heartsplus.config.title": "HeartsPlus 设置",
-	"heartsplus.config.enabled": "指示器",
-	"heartsplus.config.show_own": "自己",
-	"heartsplus.config.absorption": "吸收",
-	"heartsplus.config.stack": "十个一行",
-	"heartsplus.config.hide_sneaking": "潜行隐藏",
+	"heartsplus.config.enabled": "显示心形",
+	"heartsplus.config.show_own": "显示自己",
 	"heartsplus.config.textures": "材质",
 	"option.heartsplus.textures.pack": "来自资源包",
 	"option.heartsplus.textures.vanilla": "原版",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "重置为默认值",
 	"heartsplus.message.enabled": "生命值显示已开启",
 	"heartsplus.message.disabled": "生命值显示已关闭",
-	"heartsplus.config.show_invisible": "显示隐身"
+	"heartsplus.config.show_invisible": "显示隐身",
+	"heartsplus.config.show_sneaking": "显示潜行"
 }

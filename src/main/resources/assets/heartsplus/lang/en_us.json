@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "Toggle Health Indicators",
 	"key.heartsplus.settings": "Open HeartsPlus Settings",
 	"heartsplus.config.title": "HeartsPlus Settings",
-	"heartsplus.config.enabled": "Indicators",
-	"heartsplus.config.show_own": "Own Player",
-	"heartsplus.config.absorption": "Absorption",
-	"heartsplus.config.stack": "Rows of 10",
-	"heartsplus.config.hide_sneaking": "Hide Sneaking",
+	"heartsplus.config.enabled": "Show Hearts",
+	"heartsplus.config.show_own": "Show on Self",
 	"heartsplus.config.textures": "Textures",
 	"option.heartsplus.textures.pack": "From Resource Pack",
 	"option.heartsplus.textures.vanilla": "Vanilla",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "Reset to Defaults",
 	"heartsplus.message.enabled": "Health indicators enabled",
 	"heartsplus.message.disabled": "Health indicators disabled",
-	"heartsplus.config.show_invisible": "Show Invisible"
+	"heartsplus.config.show_invisible": "Show Invisible",
+	"heartsplus.config.show_sneaking": "Show Sneaking"
 }

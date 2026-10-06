@@ -3,11 +3,8 @@
 	"key.heartsplus.toggle": "Увімкнути/вимкнути індикатори здоров'я",
 	"key.heartsplus.settings": "Відкрити налаштування HeartsPlus",
 	"heartsplus.config.title": "Налаштування HeartsPlus",
-	"heartsplus.config.enabled": "Індикатори",
-	"heartsplus.config.show_own": "Свій гравець",
-	"heartsplus.config.absorption": "Поглинання",
-	"heartsplus.config.stack": "Ряди по 10",
-	"heartsplus.config.hide_sneaking": "Ховати крадучихся",
+	"heartsplus.config.enabled": "Показувати серця",
+	"heartsplus.config.show_own": "Показувати собі",
 	"heartsplus.config.textures": "Текстури",
 	"option.heartsplus.textures.pack": "З ресурспаку",
 	"option.heartsplus.textures.vanilla": "Ванільні",
@@ -17,5 +14,6 @@
 	"heartsplus.config.reset": "Скинути налаштування",
 	"heartsplus.message.enabled": "Індикатори здоров'я увімкнено",
 	"heartsplus.message.disabled": "Індикатори здоров'я вимкнено",
-	"heartsplus.config.show_invisible": "Показувати невидимих"
+	"heartsplus.config.show_invisible": "Показувати невидимих",
+	"heartsplus.config.show_sneaking": "Показувати крадучихся"
 }
