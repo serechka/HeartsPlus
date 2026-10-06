@@ -243,7 +243,10 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	private static ResolvedSprite resolve(HeartType type, boolean half, boolean blinking, AtlasManager atlasManager) {
-		if (HeartsPlusConfig.isVanillaTextures()) {
+		// The warm-up gate keeps the first frames after enabling the option on
+		// the atlas: bundled textures are registered from a client tick, and a
+		// mid-frame first upload would leave them blank until F3+T.
+		if (HeartsPlusConfig.isVanillaTextures() && vanillaTexturesWarmed) {
 			Identifier file = blinking
 					? half ? type.fileHalfBlinking : type.fileFullBlinking
 					: half ? type.fileHalf : type.fileFull;
