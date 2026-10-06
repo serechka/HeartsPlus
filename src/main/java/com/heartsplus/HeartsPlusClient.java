@@ -4,10 +4,14 @@ import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,12 +23,25 @@ public class HeartsPlusClient implements ClientModInitializer {
 
 	private static KeyMapping toggleRenderingKey;
 	private static KeyMapping openSettingsKey;
-	private static boolean texturesWarmedUp;
 
 	@Override
 	public void onInitializeClient() {
 		HeartsPlusConfig.load();
 		LOGGER.info("HeartsPlus client initialized");
+
+		// Atlas sprites are re-stitched on resource reloads and their UV
+		// coordinates move, so the renderer's sprite cache must be dropped.
+		ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(new SimpleSynchronousResourceReloadListener() {
+			@Override
+			public Identifier getFabricId() {
+				return Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "atlas_sprite_cache");
+			}
+
+			@Override
+			public void onResourceManagerReload(ResourceManager resourceManager) {
+				HeartsAboveHeadRenderer.invalidateAtlasSprites();
+			}
+		});
 
 		KeyMapping.Category category = KeyMapping.Category.register(
 				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
@@ -34,10 +51,11 @@ public class HeartsPlusClient implements ClientModInitializer {
 				"key.heartsplus.settings", KEY_H, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			// First tick: register and upload the bundled heart textures before
-			// any frame tries to draw them (lazy mid-frame uploads stay blank).
-			if (!texturesWarmedUp) {
-				texturesWarmedUp = true;
+			// Bundled heart textures are only needed in vanilla-texture mode.
+			// Registration must happen outside a frame (lazy mid-frame uploads
+			// stay blank), so it runs from the first tick with the mode enabled;
+			// the call itself no-ops once warmed.
+			if (HeartsPlusConfig.isVanillaTextures()) {
 				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
 			}
 			while (toggleRenderingKey.consumeClick()) {
