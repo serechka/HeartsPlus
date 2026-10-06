@@ -1,10 +1,13 @@
 package com.heartsplus.render;
 
 /**
- * Pure geometry of a heart bar, computed from raw health values. Deliberately
- * holds no Minecraft classes so it is directly unit-testable. Row 0 is the
- * bottom row (closest to the nameplate); extra rows stack upward like the
- * vanilla HUD.
+ * Pure vanilla slot model of a heart bar, computed from raw health values.
+ * Deliberately holds no Minecraft classes so it is directly unit-testable.
+ * Row 0 is the bottom row (closest to the nameplate); extra rows stack
+ * upward like the vanilla HUD. Slot math mirrors vanilla Hud.extractHearts:
+ * slot {@code s} covers the half-hearts {@code s*2} and {@code s*2 + 1},
+ * health containers fill every slot below the max-health count and
+ * absorption hearts occupy the slots beyond it.
  */
 public final class HeartBarLayout {
 	/** One heart cell in GUI pixels, matching the vanilla HUD sprite. */
@@ -14,102 +17,122 @@ public final class HeartBarLayout {
 	private static final int HEARTS_PER_ROW = 10;
 	private static final int ROW_SPACING_BASE = 10;
 	private static final int MIN_ROW_SPACING = 3;
-	/** Damage-blink cadence: the highlight shows on every other beat of this length. */
-	private static final int BLINK_INTERVAL_TICKS = 3;
+	/** Vanilla low-health threshold: at two full hearts or less the bar starts shaking. */
+	private static final int SHAKE_HALF_HEARTS = 4;
 
-	private final int heartsRed;
-	private final int heartsNormal;
-	private final int heartsTotal;
-	private final boolean lastRedHalf;
-	private final boolean lastYellowHalf;
-	private final boolean lastBlinkHalf;
-	private final int heartsBlink;
+	private final int currentHealth;
+	private final int displayHealth;
+	private final int absorption;
+	private final int healthContainers;
+	private final int slots;
 	private final int rowOffset;
 	private final float startX;
+	private final float maxHealth;
 
-	private HeartBarLayout(int healthRed, int maxHealth, int healthYellow, int blinkHalves) {
-		this.heartsRed = ceil(healthRed / 2.0F);
-		this.lastRedHalf = (healthRed & 1) == 1;
-		this.heartsNormal = ceil(maxHealth / 2.0F);
-		int heartsYellow = ceil(healthYellow / 2.0F);
-		this.lastYellowHalf = (healthYellow & 1) == 1;
-		this.heartsTotal = this.heartsNormal + heartsYellow;
+	private HeartBarLayout(int currentHealth, int attributeMaxHealth, int absorption, int displayHealth) {
+		// Vanilla sizes the container count by the larger of the attribute and
+		// both animated health copies: while displayHealth still trails the
+		// pre-damage value, the containers it covers must not collapse.
+		this.maxHealth = Math.max(attributeMaxHealth, Math.max(displayHealth, currentHealth));
+		this.currentHealth = currentHealth;
+		this.displayHealth = displayHealth;
+		this.absorption = absorption;
+		this.healthContainers = ceil(this.maxHealth / 2.0F);
+		this.slots = this.healthContainers + ceil(absorption / 2.0F);
 
-		this.heartsBlink = ceil(blinkHalves / 2.0F);
-		this.lastBlinkHalf = (blinkHalves & 1) == 1;
-
-		int rowsTotal = (this.heartsTotal + HEARTS_PER_ROW - 1) / HEARTS_PER_ROW;
+		int rowsTotal = (this.slots + HEARTS_PER_ROW - 1) / HEARTS_PER_ROW;
 		// Vanilla-like row compression: rows slide closer together as the bar
 		// grows taller, down to a minimum overlap step.
 		this.rowOffset = Math.max(ROW_SPACING_BASE - (rowsTotal - 2), MIN_ROW_SPACING);
-		float rowWidth = Math.min(this.heartsTotal, HEARTS_PER_ROW) * HEART_SPACING + 1.0F;
+		float rowWidth = Math.min(this.slots, HEARTS_PER_ROW) * HEART_SPACING + 1.0F;
 		this.startX = -rowWidth / 2.0F;
 	}
 
 	/** Builds the bar from health values in half-hearts (vanilla ceil semantics). */
-	public static HeartBarLayout of(float health, float maxHealth, float absorption, float blinkOldHealth) {
-		return new HeartBarLayout(ceil(health), ceil(maxHealth), ceil(absorption), ceil(blinkOldHealth));
+	public static HeartBarLayout of(float health, float maxHealth, float absorption, float displayHealth) {
+		return new HeartBarLayout(ceil(health), ceil(maxHealth), ceil(absorption), ceil(displayHealth));
 	}
 
-	/** Rounds up like vanilla {@code MathHelper.ceil} without dragging Minecraft onto the test classpath. */
+	/** Rounds up like vanilla {@code Mth.ceil} without dragging Minecraft onto the test classpath. */
 	private static int ceil(float value) {
 		return (int) Math.ceil(value);
 	}
 
-	public int heartsRed() {
-		return this.heartsRed;
+	/** Every drawn cell of the bar: max-health containers plus absorption containers. */
+	public int slots() {
+		return this.slots;
 	}
 
-	public int heartsNormal() {
-		return this.heartsNormal;
-	}
-
-	public int heartsTotal() {
-		return this.heartsTotal;
+	/** Containers of the health rows; absorption slots start at this index. */
+	public int healthContainers() {
+		return this.healthContainers;
 	}
 
 	/** Left edge of a heart's cell in GUI pixels, centred on the head. */
-	public float x(int heart) {
-		return this.startX + heart % HEARTS_PER_ROW * HEART_SPACING;
+	public float x(int slot) {
+		return this.startX + slot % HEARTS_PER_ROW * HEART_SPACING;
 	}
 
 	/** Top edge of a heart's quad in GUI pixels; rows grow upwards. */
-	public float yTop(int heart) {
-		return -(heart / HEARTS_PER_ROW * this.rowOffset) - HEART_SIZE;
+	public float yTop(int slot) {
+		return -(slot / HEARTS_PER_ROW * this.rowOffset) - HEART_SIZE;
 	}
 
-	public boolean isRedHalf(int heart) {
-		return heart == this.heartsRed - 1 && this.lastRedHalf;
+	/** True beyond the max-health containers, where absorption hearts live. */
+	public boolean isAbsorptionSlot(int slot) {
+		return slot >= this.healthContainers;
 	}
 
-	public boolean hasRedHalf() {
-		return this.heartsRed > 0 && this.lastRedHalf;
+	/** First half-heart index covered by the slot's absorption heart. */
+	public int absorptionHalves(int slot) {
+		return slot * 2 - this.healthContainers * 2;
 	}
 
-	public boolean isYellowHalf(int heart) {
-		return heart == this.heartsTotal - 1 && this.lastYellowHalf && this.heartsTotal > this.heartsNormal;
+	/** Vanilla: the absorption heart exists when its first half-index is below the absorption total. */
+	public boolean hasAbsorptionHeart(int slot) {
+		return this.isAbsorptionSlot(slot) && this.absorptionHalves(slot) < this.absorption;
 	}
 
-	public boolean hasYellowHalf() {
-		return this.heartsTotal > this.heartsNormal && this.lastYellowHalf;
+	/** Vanilla: the absorption heart is half when its first half-index plus one equals the absorption total. */
+	public boolean isAbsorptionHalf(int slot) {
+		return this.absorptionHalves(slot) + 1 == this.absorption;
 	}
 
-	public boolean lastBlinkHalf() {
-		return this.lastBlinkHalf;
+	/** Vanilla: the health heart exists when the slot's first half-index is below the current health. */
+	public boolean hasHealthHeart(int slot) {
+		return slot * 2 < this.currentHealth;
+	}
+
+	/** Vanilla: the health heart is half when the slot's first half-index plus one equals the current health. */
+	public boolean isHealthHalf(int slot) {
+		return slot * 2 + 1 == this.currentHealth;
+	}
+
+	/** Vanilla: blink overlays cover every heart up to the lagging displayHealth copy. */
+	public boolean hasBlinkHeart(int slot) {
+		return slot * 2 < this.displayHealth;
+	}
+
+	/** Vanilla: the blink overlay is half when the slot's first half-index plus one equals displayHealth. */
+	public boolean isBlinkHalf(int slot) {
+		return slot * 2 + 1 == this.displayHealth;
+	}
+
+	/** Vanilla shakes every heart while the bar holds two full hearts or less. */
+	public boolean shakes() {
+		return this.currentHealth + this.absorption <= SHAKE_HALF_HEARTS;
 	}
 
 	/**
-	 * Hearts between the current and pre-drop health blink for a short window
-	 * after damage, alternating on a fixed cadence like the vanilla HUD.
-	 * Returns the exclusive upper heart index, or {@link #heartsRed()} when not
-	 * in the blink window / on the "off" beat of the cadence.
+	 * The health slot lifted by two pixels during Regeneration, cycling through
+	 * the bar like the vanilla HUD; -1 when the effect is absent or the bounce
+	 * index fell beyond the health containers (invisible that tick, as in vanilla).
 	 */
-	public int blinkUpperBound(int nowTick, int blinkEndTick, float blinkOldHealth, float currentHealth) {
-		if (nowTick >= blinkEndTick
-				|| blinkOldHealth <= currentHealth
-				|| nowTick / BLINK_INTERVAL_TICKS % 2 != 0) {
-			return this.heartsRed;
+	public int regenBounceSlot(int tick, boolean regenerating) {
+		if (!regenerating) {
+			return -1;
 		}
-		return Math.min(this.heartsBlink, this.heartsNormal);
+		int slot = Math.floorMod(tick, ceil(this.maxHealth + 5.0F));
+		return slot < this.healthContainers ? slot : -1;
 	}
 }
