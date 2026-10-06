@@ -14,10 +14,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiSpriteManager;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.state.PlayerRenderState;
-import net.minecraft.client.gui.GuiSpriteManager;
 import net.minecraft.client.renderer.texture.SimpleTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureContents;
@@ -26,6 +27,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import org.joml.Matrix4f;
 import org.joml.Quaternionfc;
 import org.slf4j.Logger;
@@ -40,17 +42,16 @@ import org.slf4j.Logger;
  *
  * <p>Hearts are drawn with the world-text render types, which — like name
  * tags — are shaded only by the lightmap. The anchor height is a fixed
- * constant so the bar never jumps with pose changes. Each sprite family sits
- * on its own z layer (containers deepest, overlays closest) so the depth
- * test cannot hide the health hearts behind their containers; inside one
- * buffer the emission order keeps the same stacking, and the gaps between
- * layers scale with the camera distance to outpace depth-buffer precision
- * loss. When "show behind blocks" is on, every pass is also drawn with the
- * see-through text render type, mirroring how vanilla name tags draw their
- * see-through part. Sneaking players always get hearts. Recent health drops
- * blink exactly like the vanilla HUD does. Geometry is drawn in passes per
- * texture (containers, health, blinking, absorption) because default-texture
- * mode binds individual sprites instead of the shared GUI atlas.</p>
+ * constant so the bar never jumps with pose changes. Sprites, pass structure
+ * and the animation all mirror the vanilla HUD (Gui.renderHearts):
+ * containers deepest, then absorption, then the blink overlay, with the
+ * health hearts on top — the same painter order the HUD uses, flattened onto
+ * z layers. Sneaking players get nothing, exactly like the see-through part
+ * of a vanilla name tag; everyone else gets the two nametag passes — a
+ * depth-tested one and, when "show behind blocks" is on, a dimmed
+ * half-transparent see-through copy. Geometry is drawn in passes per texture
+ * (containers, health, blinking, absorption) because default-texture mode
+ * binds individual sprites instead of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -76,16 +77,19 @@ public final class HeartsAboveHeadRenderer {
 	private static int suppressedFailures;
 
 	/**
-	 * Fixed height above the entity origin where the heart bar sits — player
-	 * height (1.8) plus the vanilla name tag pad (0.5) minus the 10 GUI px
-	 * (10 × 0.025) that the Height Offset used to subtract by default: offset
-	 * 0 now lands the bar at the same playtested position the old anchor 2.3
-	 * + offset -10 produced. Deliberately not derived from
+	 * Fixed height above the entity origin where the heart bar sits:
+	 * 0.4.3 ideal +2px (2 GUI px × 0.025). Deliberately not derived from
 	 * nameTagAttachment/boundingBoxHeight: those sag in the sneak
 	 * pose with interpolation lag, which made the hearts jump.
 	 */
-	private static final float HEART_ANCHOR_HEIGHT = 2.05F;
+	private static final float HEART_ANCHOR_HEIGHT = 2.10F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
+	/** Vanilla name tag text is drawn with this much extra light emission (EntityRenderer.renderNameTag). */
+	private static final int NAMETAG_EMISSION = 2;
+	/** Alpha of the nametag's see-through copy: vanilla colour 0x80FFFFFF — half-transparent white. */
+	private static final int SEE_THROUGH_ALPHA = 0x80;
+	/** Vanilla shakes the bar from a generator seeded per tick with this exact product (Gui.renderHealthLevel). */
+	private static final int SHAKE_SEED_MULTIPLIER = 312871;
 
 	private HeartsAboveHeadRenderer() {
 	}
@@ -160,6 +164,14 @@ public final class HeartsAboveHeadRenderer {
 			skipOnce("own player hidden (enable 'Show above yourself')");
 			return;
 		}
+		if (state.isDiscrete) {
+			// Vanilla never hides a sneaking player's solid name tag but drops
+			// its see-through copy (renderNameTag passes !isDiscrete as the
+			// nametag's see-through flag), so a sneaking player behind blocks
+			// shows nothing at all. The hearts follow that rule unconditionally.
+			skipOnce("player is sneaking");
+			return;
+		}
 		double maxDistance = HeartsPlusConfig.getRenderDistance();
 		if (state.distanceToCameraSq > maxDistance * maxDistance) {
 			skipOnce("player beyond the render distance");
@@ -173,16 +185,27 @@ public final class HeartsAboveHeadRenderer {
 			return;
 		}
 
+		// With the animation off the bar is static: no blink windows and no
+		// displayHealth lag, so the blink passes are skipped entirely and their
+		// blinking sprites are never resolved (the resolve calls sit inside the
+		// `blinking` gate).
+		boolean animation = HeartsPlusConfig.isBlinkAnimationEnabled();
+		int animationTick = health.heartsplus$getAnimationTick();
+		int displayHealth = animation ? health.heartsplus$getDisplayHealth() : (int) Math.ceil(health.heartsplus$getHealth());
+		boolean blinking = animation && health.heartsplus$isBlinking();
 		HeartBarLayout layout = HeartBarLayout.of(health.heartsplus$getHealth(), health.heartsplus$getMaxHealth(),
-				health.heartsplus$getAbsorption(), health.heartsplus$getBlinkOldHealth());
-		if (layout.heartsTotal() <= 0) {
+				health.heartsplus$getAbsorption(), displayHealth);
+		if (layout.slots() <= 0) {
 			// Degenerate health values — nothing to draw, skip all geometry work.
 			return;
 		}
 		GuiSpriteManager guiSpriteManager = Minecraft.getInstance().getGuiSprites();
 		HeartType family = HeartType.forStatus(health.heartsplus$isPoisoned(), health.heartsplus$isWithered(),
 				health.heartsplus$isFrozen());
-		ResolvedSprite container = resolve(HeartType.CONTAINER, false, false, guiSpriteManager);
+		// Withered players keep their black absorption hearts, exactly like the vanilla HUD.
+		HeartType absorptionFamily = family == HeartType.WITHERED ? HeartType.WITHERED : HeartType.ABSORBING;
+		int[] shake = shakeOffsets(layout, animationTick, animation);
+		int bounceSlot = layout.regenBounceSlot(animationTick, animation && health.heartsplus$isRegenerating());
 
 		poseStack.pushPose();
 		poseStack.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
@@ -194,94 +217,148 @@ public final class HeartsAboveHeadRenderer {
 		poseStack.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
 		Matrix4f pose = poseStack.last().pose();
 
-		int blinkFrom = layout.heartsRed();
-		// With the animation disabled blinkTo stays at blinkFrom, so the blink
-		// passes are skipped entirely and their blinking sprites are never
-		// resolved (the resolve calls sit inside the `blinkTo > blinkFrom` gate).
-		int blinkTo = HeartsPlusConfig.isBlinkAnimationEnabled()
-				? layout.blinkUpperBound((int) Math.floor(state.ageInTicks), health.heartsplus$getBlinkEndTick(),
-						health.heartsplus$getBlinkOldHealth(), health.heartsplus$getHealth())
-				: blinkFrom;
-
 		// Passes are drawn lazily per family so empty passes (no blinking, no
-		// absorption) cost nothing at all. Each family sits on its own z layer:
-		// containers deepest, then health, blinking and absorption overlays —
-		// without the offsets the depth test z-fights the quads apart.
-		//
-		// The layer gap must grow with the camera distance: depth precision
-		// degrades quadratically (at d blocks the depth buffer resolves gaps of
-		// roughly d² × 1.2e-6 blocks), so the old fixed 0.01 px step merged the
-		// passes far away — at 32 m it resolves 0.0012 blocks, at 128 m only
-		// 0.0196, and the red hearts lost to their containers. One milliblock
-		// per block of range gives 0.128 blocks per layer at 128 m (well above
-		// the required ~0.02) while six layers total 0.77 blocks — under a
-		// pixel of parallax on screen; up close the 0.002 floor keeps the bar
-		// visually coplanar (0.008 blocks at 8 m — imperceptible).
-		float zStep = Math.max(0.002F, Mth.sqrt((float) state.distanceToCameraSq) * 0.001F);
+		// absorption) cost nothing at all. Each family sits on its own z layer
+		// in the HUD's painter order: containers deepest, then absorption, then
+		// the blink overlay, with the health hearts on top — without the
+		// offsets the depth test z-fights the quads apart.
+		float zStep = HeartLayerSpacing.zStep(Mth.sqrt((float) state.distanceToCameraSq));
 		final float containerZ = 0.0F;
-		final float familyFullZ = zStep;
-		final float familyHalfZ = 2 * zStep;
-		final float familyFullBlinkingZ = 3 * zStep;
-		final float familyHalfBlinkingZ = 4 * zStep;
-		final float absorbingFullZ = 5 * zStep;
-		final float absorbingHalfZ = 6 * zStep;
-		drawPass(bufferSource, container, vertices -> {
-			for (int heart = 0; heart < layout.heartsTotal(); heart++) {
-				emitHeart(vertices, pose, layout.x(heart), layout.yTop(heart), container, packedLight, containerZ);
+		final float absorbingZ = zStep;
+		final float familyBlinkingZ = 2 * zStep;
+		final float familyZ = 3 * zStep;
+
+		ResolvedSprite container = resolve(HeartType.CONTAINER, false, blinking, guiSpriteManager);
+		drawPass(bufferSource, container, containerZ, packedLight, (vertices, passLight, alpha) -> {
+			for (int slot = 0; slot < layout.slots(); slot++) {
+				emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), container, passLight, containerZ, alpha);
 			}
 		});
-		if (layout.heartsRed() > 0) {
-			ResolvedSprite familyFull = resolve(family, false, false, guiSpriteManager);
-			drawPass(bufferSource, familyFull, vertices -> {
-				for (int heart = 0; heart < layout.heartsRed(); heart++) {
-					if (!layout.isRedHalf(heart)) {
-						emitHeart(vertices, pose, layout.x(heart), layout.yTop(heart), familyFull, packedLight, familyFullZ);
+		if (hasAbsorption(layout, false)) {
+			ResolvedSprite absorbingFull = resolve(absorptionFamily, false, false, guiSpriteManager);
+			drawPass(bufferSource, absorbingFull, absorbingZ, packedLight, (vertices, passLight, alpha) -> {
+				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
+					if (layout.hasAbsorptionHeart(slot) && !layout.isAbsorptionHalf(slot)) {
+						emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingFull, passLight, absorbingZ, alpha);
 					}
 				}
 			});
-			if (layout.hasRedHalf()) {
-				ResolvedSprite familyHalf = resolve(family, true, false, guiSpriteManager);
-				drawPass(bufferSource, familyHalf, vertices ->
-						emitHeart(vertices, pose, layout.x(layout.heartsRed() - 1), layout.yTop(layout.heartsRed() - 1), familyHalf, packedLight, familyHalfZ));
-			}
 		}
-		if (blinkTo > blinkFrom) {
+		if (hasAbsorption(layout, true)) {
+			ResolvedSprite absorbingHalf = resolve(absorptionFamily, true, false, guiSpriteManager);
+			drawPass(bufferSource, absorbingHalf, absorbingZ, packedLight, (vertices, passLight, alpha) -> {
+				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
+					if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot)) {
+						emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingHalf, passLight, absorbingZ, alpha);
+					}
+				}
+			});
+		}
+		if (blinking) {
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, guiSpriteManager);
-			drawPass(bufferSource, familyFullBlinking, vertices -> {
-				for (int heart = blinkFrom; heart < blinkTo; heart++) {
-					if (heart != blinkTo - 1 || !layout.lastBlinkHalf()) {
-						emitHeart(vertices, pose, layout.x(heart), layout.yTop(heart), familyFullBlinking, packedLight, familyFullBlinkingZ);
+			drawPass(bufferSource, familyFullBlinking, familyBlinkingZ, packedLight, (vertices, passLight, alpha) -> {
+				for (int slot = 0; slot < layout.slots(); slot++) {
+					if (layout.hasBlinkHeart(slot) && !layout.isBlinkHalf(slot)) {
+						emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFullBlinking, passLight, familyBlinkingZ, alpha);
 					}
 				}
 			});
-			if (layout.lastBlinkHalf()) {
+			if (hasBlinkHalf(layout)) {
 				ResolvedSprite familyHalfBlinking = resolve(family, true, true, guiSpriteManager);
-				drawPass(bufferSource, familyHalfBlinking, vertices ->
-						emitHeart(vertices, pose, layout.x(blinkTo - 1), layout.yTop(blinkTo - 1), familyHalfBlinking, packedLight, familyHalfBlinkingZ));
+				drawPass(bufferSource, familyHalfBlinking, familyBlinkingZ, packedLight, (vertices, passLight, alpha) -> {
+					for (int slot = 0; slot < layout.slots(); slot++) {
+						if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
+							emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalfBlinking, passLight, familyBlinkingZ, alpha);
+						}
+					}
+				});
 			}
 		}
-		if (layout.heartsTotal() > layout.heartsNormal()) {
-			ResolvedSprite absorbingFull = resolve(HeartType.ABSORBING, false, false, guiSpriteManager);
-			drawPass(bufferSource, absorbingFull, vertices -> {
-				for (int heart = layout.heartsNormal(); heart < layout.heartsTotal(); heart++) {
-					if (!layout.isYellowHalf(heart)) {
-						emitHeart(vertices, pose, layout.x(heart), layout.yTop(heart), absorbingFull, packedLight, absorbingFullZ);
+		if (hasHealth(layout, false)) {
+			ResolvedSprite familyFull = resolve(family, false, false, guiSpriteManager);
+			drawPass(bufferSource, familyFull, familyZ, packedLight, (vertices, passLight, alpha) -> {
+				for (int slot = 0; slot < layout.slots(); slot++) {
+					if (layout.hasHealthHeart(slot) && !layout.isHealthHalf(slot)) {
+						emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFull, passLight, familyZ, alpha);
 					}
 				}
 			});
-			if (layout.hasYellowHalf()) {
-				ResolvedSprite absorbingHalf = resolve(HeartType.ABSORBING, true, false, guiSpriteManager);
-				drawPass(bufferSource, absorbingHalf, vertices ->
-						emitHeart(vertices, pose, layout.x(layout.heartsTotal() - 1), layout.yTop(layout.heartsTotal() - 1), absorbingHalf, packedLight, absorbingHalfZ));
-			}
+		}
+		if (hasHealth(layout, true)) {
+			ResolvedSprite familyHalf = resolve(family, true, false, guiSpriteManager);
+			drawPass(bufferSource, familyHalf, familyZ, packedLight, (vertices, passLight, alpha) -> {
+				for (int slot = 0; slot < layout.slots(); slot++) {
+					if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot)) {
+						emitHeart(vertices, pose, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalf, passLight, familyZ, alpha);
+					}
+				}
+			});
 		}
 
 		poseStack.popPose();
 		if (!reportedFirstHeart) {
 			reportedFirstHeart = true;
 			LOGGER.info("Hearts drawn above a player for the first time ({} hearts, texture {})",
-					layout.heartsTotal(), container.texture());
+					layout.slots(), container.texture());
 		}
+	}
+
+	/** True when any slot draws a full (half=false) or half (half=true) absorption heart. */
+	private static boolean hasAbsorption(HeartBarLayout layout, boolean half) {
+		for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
+			if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot) == half) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True when any slot draws a full (half=false) or half (half=true) health heart. */
+	private static boolean hasHealth(HeartBarLayout layout, boolean half) {
+		for (int slot = 0; slot < layout.slots(); slot++) {
+			if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot) == half) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True while a half-heart blink overlay should be drawn (only the top displayHealth heart can be half). */
+	private static boolean hasBlinkHalf(HeartBarLayout layout) {
+		for (int slot = 0; slot < layout.slots(); slot++) {
+			if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Top GUI pixel of a slot's sprites, with the low-health shake and the Regeneration bounce applied. */
+	private static float slotY(HeartBarLayout layout, int slot, int[] shake, int bounceSlot) {
+		float y = layout.yTop(slot) + shake[slot];
+		if (slot == bounceSlot) {
+			y -= 2.0F;
+		}
+		return y;
+	}
+
+	/**
+	 * Vanilla's per-tick low-health jitter: while the bar holds two hearts or
+	 * less, every heart is offset by a random extra pixel. The generator is
+	 * seeded per tick — with the same integer product as vanilla — and
+	 * consumed from the top slot down exactly like Gui.renderHearts. A static
+	 * bar (animation off) skips the jitter entirely.
+	 */
+	private static int[] shakeOffsets(HeartBarLayout layout, int tick, boolean animation) {
+		int[] shake = new int[layout.slots()];
+		if (animation && layout.shakes()) {
+			RandomSource random = RandomSource.create();
+			random.setSeed(tick * SHAKE_SEED_MULTIPLIER);
+			for (int slot = layout.slots() - 1; slot >= 0; slot--) {
+				shake[slot] = random.nextInt(2);
+			}
+		}
+		return shake;
 	}
 
 	private static void skipOnce(String reason) {
@@ -334,25 +411,34 @@ public final class HeartsAboveHeadRenderer {
 		return sprite;
 	}
 
-	private static void drawPass(MultiBufferSource bufferSource, ResolvedSprite sprite, HeartEmitter emitter) {
+	/**
+	 * Draws one sprite's geometry as the two vanilla name tag passes: a
+	 * depth-tested one with the nametag's +2 light emission, and — when the
+	 * option is on — a see-through copy without depth test, dimmed to the
+	 * nametag's half-transparent white (0x80FFFFFF) and lit by the plain
+	 * light coords, bit-exact with EntityRenderer.renderNameTag.
+	 */
+	private static void drawPass(MultiBufferSource bufferSource, ResolvedSprite sprite, float z,
+			int packedLight, HeartEmitter renderer) {
+		int emissiveLight = LightTexture.lightCoordsWithEmission(packedLight, NAMETAG_EMISSION);
 		// Mirrors vanilla nameplates: the normal layer is occluded by walls,
 		// the see-through layer shows dimly through them. All quads of a pass
 		// are emitted before the next buffer is requested, so a shared vertex
 		// builder can never mix the passes up.
-		emitter.emit(bufferSource.getBuffer(RenderType.text(sprite.texture())));
+		renderer.emit(bufferSource.getBuffer(RenderType.text(sprite.texture())), emissiveLight, 255);
 		if (HeartsPlusConfig.isShowBehindBlocks()) {
 			// Same geometry again without a depth test, so it stays visible
 			// through walls — exactly how vanilla name tags draw their
 			// see-through part. Drawn only when the option is on, so the
 			// default path stays untouched.
-			emitter.emit(bufferSource.getBuffer(RenderType.textSeeThrough(sprite.texture())));
+			renderer.emit(bufferSource.getBuffer(RenderType.textSeeThrough(sprite.texture())), packedLight, SEE_THROUGH_ALPHA);
 		}
 	}
 
-	/** One pass's worth of heart quads, emitted into whatever buffer the pass targets. */
+	/** One slot's quad emission, parameterised by the per-pass light and alpha. */
 	@FunctionalInterface
 	private interface HeartEmitter {
-		void emit(VertexConsumer vertices);
+		void emit(VertexConsumer vertices, int light, int alpha);
 	}
 
 	/**
@@ -394,7 +480,7 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	private static void emitHeart(VertexConsumer vertices, Matrix4f pose, float x, float yTop,
-			ResolvedSprite sprite, int packedLight, float z) {
+			ResolvedSprite sprite, int packedLight, float z, int alpha) {
 		float endX = x + HeartBarLayout.HEART_SIZE;
 		float endY = yTop + HeartBarLayout.HEART_SIZE;
 		// The world-text vertex format is POSITION_TEX_LIGHTMAP_COLOR; every
@@ -403,12 +489,12 @@ public final class HeartsAboveHeadRenderer {
 		// quads (BakedQuad of the font renderer): top-left, bottom-left,
 		// bottom-right, top-right.
 		vertices.addVertex(pose, x, yTop, z).setUv(sprite.u0(), sprite.v0())
-				.setLight(packedLight).setColor(255, 255, 255, 255);
+				.setLight(packedLight).setColor(255, 255, 255, alpha);
 		vertices.addVertex(pose, x, endY, z).setUv(sprite.u0(), sprite.v1())
-				.setLight(packedLight).setColor(255, 255, 255, 255);
+				.setLight(packedLight).setColor(255, 255, 255, alpha);
 		vertices.addVertex(pose, endX, endY, z).setUv(sprite.u1(), sprite.v1())
-				.setLight(packedLight).setColor(255, 255, 255, 255);
+				.setLight(packedLight).setColor(255, 255, 255, alpha);
 		vertices.addVertex(pose, endX, yTop, z).setUv(sprite.u1(), sprite.v0())
-				.setLight(packedLight).setColor(255, 255, 255, 255);
+				.setLight(packedLight).setColor(255, 255, 255, alpha);
 	}
 }

@@ -57,7 +57,7 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
 | Show Sneaking | OFF | Off = sneaking players get no hearts (like their name tag) |
 | Animation | ON | Damage-blink flash above a player after they take damage |
-| Heart Textures | Current Pack | The active resource pack, or pull the built-in default-pack hearts |
+| Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
 | Vertical Offset | 0 | Fine-tune height, −20 – +40 |

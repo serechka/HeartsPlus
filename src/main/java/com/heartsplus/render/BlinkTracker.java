@@ -3,52 +3,43 @@ package com.heartsplus.render;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import net.minecraft.Util;
+import net.minecraft.util.Mth;
 
 /**
- * Per-player damage-blink history, keyed by the entity UUID. Deliberately
- * lives outside the render state: vanilla hands out recycled render states
- * for every frame, and storing the history on the state silently reset it,
- * killing the blink animation. Render-thread only — both the state update
- * and the render phases run there — so the plain map needs no locking;
- * entries of despawned players are collected weakly.
+ * Per-player vanilla health-animation history, keyed by the entity UUID.
+ * Deliberately lives outside the render state: vanilla hands out recycled
+ * render states for every frame, and storing the history on the state
+ * silently reset it, killing the animation. Render-thread only — both the
+ * state update and the render phases run there — so the plain map needs no
+ * locking; entries of despawned players are collected weakly.
  */
 public final class BlinkTracker {
-	/** How long the highlight plays after a health drop, in game ticks. */
-	private static final int BLINK_TICKS = 15;
-
-	private static final Map<UUID, BlinkState> blinkStates = new WeakHashMap<>();
+	private static final Map<UUID, HeartAnimationState> animationStates = new WeakHashMap<>();
 
 	private BlinkTracker() {
 	}
 
 	/**
-	 * Feeds the current health of a player; a drop against the previous value
-	 * arms the blink window for the hearts between the old and new values.
+	 * Feeds the current health of a player into the vanilla animation model.
+	 * The per-tick guard inside {@link HeartAnimationState} keeps the repeated
+	 * per-frame state updates from advancing the animation more than once per
+	 * game tick — the cadence the vanilla HUD ticks with.
 	 */
-	public static void update(UUID playerId, float health, int tick) {
-		BlinkState state = blinkStates.computeIfAbsent(playerId, id -> new BlinkState());
-		if (!Float.isNaN(state.lastHealth) && health < state.lastHealth - 0.01F) {
-			state.blinkOldHealth = state.lastHealth;
-			state.blinkEndTick = tick + BLINK_TICKS;
-		}
-		state.lastHealth = health;
+	public static void update(UUID playerId, float health, int tick, boolean invulnerable) {
+		animationStates.computeIfAbsent(playerId, id -> new HeartAnimationState())
+				.tick(Mth.ceil(health), tick, Util.getMillis(), invulnerable);
 	}
 
-	/** Health the player had before the latest drop; NaN when nothing was recorded yet. */
-	public static float getBlinkOldHealth(UUID playerId) {
-		BlinkState state = blinkStates.get(playerId);
-		return state == null ? Float.NaN : state.blinkOldHealth;
+	/** The lagging vanilla displayHealth copy in half-hearts; 0 before the first snap. */
+	public static int getDisplayHealth(UUID playerId) {
+		HeartAnimationState state = animationStates.get(playerId);
+		return state == null ? 0 : state.displayHealth();
 	}
 
-	/** Game tick until which the blink animation plays; MIN_VALUE when idle. */
-	public static int getBlinkEndTick(UUID playerId) {
-		BlinkState state = blinkStates.get(playerId);
-		return state == null ? Integer.MIN_VALUE : state.blinkEndTick;
-	}
-
-	private static final class BlinkState {
-		private float lastHealth = Float.NaN;
-		private float blinkOldHealth;
-		private int blinkEndTick = Integer.MIN_VALUE;
+	/** True on the on-frames of the vanilla blink flash for the current tick. */
+	public static boolean isBlinking(UUID playerId) {
+		HeartAnimationState state = animationStates.get(playerId);
+		return state != null && state.isBlinking();
 	}
 }
