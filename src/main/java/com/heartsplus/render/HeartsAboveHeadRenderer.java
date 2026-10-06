@@ -2,9 +2,6 @@ package com.heartsplus.render;
 
 import com.heartsplus.HeartsPlusConfig;
 import com.heartsplus.HeartsPlusLog;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.AddressMode;
-import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.EnumMap;
@@ -13,10 +10,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.texture.SimpleTexture;
@@ -25,7 +21,7 @@ import net.minecraft.client.renderer.texture.TextureContents;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.Material;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.slf4j.Logger;
 
 /**
@@ -50,7 +46,7 @@ import org.slf4j.Logger;
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
 	/** Bundled-file textures that failed to load; those hearts fall back to atlas sprites. */
-	private static final Set<Identifier> unavailableVanillaTextures = new HashSet<>();
+	private static final Set<ResourceLocation> unavailableVanillaTextures = new HashSet<>();
 	/** Each skip reason is logged once so missing hearts can be diagnosed from the log. */
 	private static final Set<String> reportedSkips = new HashSet<>();
 	/**
@@ -98,7 +94,7 @@ public final class HeartsAboveHeadRenderer {
 		}
 		vanillaTexturesWarmed = true;
 		for (HeartType type : HeartType.values()) {
-			for (Identifier texture : type.fileTextures()) {
+			for (ResourceLocation texture : type.fileTextures()) {
 				try {
 					textureManager.registerAndLoad(texture, new NearestPixelTexture(texture));
 				} catch (Exception e) {
@@ -268,7 +264,7 @@ public final class HeartsAboveHeadRenderer {
 		// the atlas: bundled textures are registered from a client tick, and a
 		// mid-frame first upload would leave them blank until F3+T.
 		if (HeartsPlusConfig.isVanillaTextures() && vanillaTexturesWarmed) {
-			Identifier file = blinking
+			ResourceLocation file = blinking
 					? half ? type.fileHalfBlinking : type.fileFullBlinking
 					: half ? type.fileHalf : type.fileFull;
 			if (!unavailableVanillaTextures.contains(file)) {
@@ -277,7 +273,7 @@ public final class HeartsAboveHeadRenderer {
 						() -> new ResolvedSprite(file, 0.0F, 0.0F, 1.0F, 1.0F));
 			}
 		}
-		Identifier spriteId = blinking
+		ResourceLocation spriteId = blinking
 				? half ? type.atlasHalfBlinking : type.atlasFullBlinking
 				: half ? type.atlasHalf : type.atlasFull;
 		return cachedSprite(atlasSprites, type, half, blinking, () -> {
@@ -309,31 +305,31 @@ public final class HeartsAboveHeadRenderer {
 		// the see-through layer shows dimly through them. The extra pass is
 		// submitted only when the option is on, so the default path stays
 		// untouched.
-		collector.submitCustomGeometry(poseStack, RenderTypes.text(sprite.texture()), renderer);
+		collector.submitCustomGeometry(poseStack, RenderType.text(sprite.texture()), renderer);
 		if (HeartsPlusConfig.isShowBehindBlocks()) {
-			collector.submitCustomGeometry(poseStack, RenderTypes.textSeeThrough(sprite.texture()), renderer);
+			collector.submitCustomGeometry(poseStack, RenderType.textSeeThrough(sprite.texture()), renderer);
 		}
 	}
 
 	/**
-	 * A bundled texture registered with NEAREST magnification and
-	 * minification (no mipmaps): the 9x9 pixel art must stay crisp, while the
-	 * metadata-less default can resolve to a linear sampler.
+	 * A bundled texture with forced NEAREST magnification and minification
+	 * (no mipmaps): the 9x9 pixel art must stay crisp regardless of the
+	 * texture metadata. Applied after the reload so the GPU texture exists —
+	 * 1.21.9 configures filtering directly on the texture, not via a sampler.
 	 */
 	private static final class NearestPixelTexture extends SimpleTexture {
-		private NearestPixelTexture(Identifier location) {
+		private NearestPixelTexture(ResourceLocation location) {
 			super(location);
 		}
 
 		@Override
 		public void apply(TextureContents contents) {
 			super.apply(contents);
-			this.sampler = RenderSystem.getSamplerCache().getSampler(
-					AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.NEAREST, FilterMode.NEAREST, false);
+			this.setFilter(false, false);
 		}
 	}
 
-	private record ResolvedSprite(Identifier texture, float u0, float v0, float u1, float v1) {
+	private record ResolvedSprite(ResourceLocation texture, float u0, float v0, float u1, float v1) {
 	}
 
 	private static void emitHeart(PoseStack.Pose pose, VertexConsumer vertices, float x, float yTop,

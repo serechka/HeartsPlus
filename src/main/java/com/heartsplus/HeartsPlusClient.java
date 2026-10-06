@@ -4,7 +4,7 @@ import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -49,7 +49,7 @@ public class HeartsPlusClient {
 		@SubscribeEvent
 		public void registerKeyMappings(RegisterKeyMappingsEvent event) {
 			KeyMapping.Category category = new KeyMapping.Category(
-					Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
+					ResourceLocation.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
 			event.registerCategory(category);
 			toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, category);
 			openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, category);
@@ -62,7 +62,7 @@ public class HeartsPlusClient {
 	static final class ResourceReloadListener {
 		@SubscribeEvent
 		public void registerReloadListeners(AddClientReloadListenersEvent event) {
-			event.addListener(Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "atlas_sprite_cache"),
+			event.addListener(ResourceLocation.fromNamespaceAndPath(HeartsPlus.MOD_ID, "atlas_sprite_cache"),
 					(ResourceManagerReloadListener) resourceManager -> HeartsAboveHeadRenderer.invalidateAtlasSprites());
 		}
 	}
