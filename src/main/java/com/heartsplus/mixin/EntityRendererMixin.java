@@ -25,16 +25,14 @@ public abstract class EntityRendererMixin {
 			boolean isLocalPlayer = avatar == Minecraft.getInstance().player;
 			holder.heartsplus$update(avatar.getHealth(), avatar.getMaxHealth(), avatar.getAbsorptionAmount(), isLocalPlayer,
 					avatar.hasEffect(MobEffects.POISON), avatar.hasEffect(MobEffects.WITHER),
-					hasVisibleGear(avatar), avatar.tickCount);
+					hasVisibleArmour(avatar), avatar.tickCount);
 		}
 	}
 
-	private static boolean hasVisibleGear(Avatar avatar) {
-		for (EquipmentSlot slot : EquipmentSlot.values()) {
-			if (!avatar.getItemBySlot(slot).isEmpty()) {
-				return true;
-			}
-		}
-		return false;
+	private static boolean hasVisibleArmour(Avatar avatar) {
+		return !avatar.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+				|| !avatar.getItemBySlot(EquipmentSlot.CHEST).isEmpty()
+				|| !avatar.getItemBySlot(EquipmentSlot.LEGS).isEmpty()
+				|| !avatar.getItemBySlot(EquipmentSlot.FEET).isEmpty();
 	}
 }

@@ -34,7 +34,7 @@ public final class HeartsPlusConfig {
 	public boolean showOwnHearts = false;
 	public boolean showAbsorption = true;
 	public boolean stackHearts = true;
-	public boolean hideWhenInvisible = true;
+	public boolean showInvisiblePlayers = false;
 	public boolean hideWhenSneaking = true;
 	public boolean useVanillaTextures = true;
 	public int heartOffset = 0;
@@ -77,12 +77,16 @@ public final class HeartsPlusConfig {
 		save();
 	}
 
-	public static boolean isHideWhenInvisible() {
-		return instance.hideWhenInvisible;
+	/**
+	 * When false (default) invisible players get no hearts at all. When true,
+	 * an invisible player still shows hearts only while wearing armour.
+	 */
+	public static boolean isShowInvisiblePlayers() {
+		return instance.showInvisiblePlayers;
 	}
 
-	public static void setHideWhenInvisible(boolean value) {
-		instance.hideWhenInvisible = value;
+	public static void setShowInvisiblePlayers(boolean value) {
+		instance.showInvisiblePlayers = value;
 		save();
 	}
 

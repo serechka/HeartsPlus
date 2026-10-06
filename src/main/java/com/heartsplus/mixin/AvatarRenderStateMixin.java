@@ -27,7 +27,7 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 	@Unique
 	private boolean heartsplus$withered;
 	@Unique
-	private boolean heartsplus$visibleGear;
+	private boolean heartsplus$visibleArmour;
 	@Unique
 	private float heartsplus$lastHealth = Float.NaN;
 	@Unique
@@ -73,8 +73,8 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
-	public boolean heartsplus$hasVisibleGear() {
-		return this.heartsplus$visibleGear;
+	public boolean heartsplus$hasVisibleArmour() {
+		return this.heartsplus$visibleArmour;
 	}
 
 	@Override
@@ -92,7 +92,7 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 	@Override
 	@Unique
 	public void heartsplus$update(float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean hasVisibleGear, int tick) {
+			boolean poisoned, boolean withered, boolean hasVisibleArmour, int tick) {
 		if (!Float.isNaN(this.heartsplus$lastHealth) && health < this.heartsplus$lastHealth - 0.01F) {
 			this.heartsplus$blinkOldHealth = this.heartsplus$lastHealth;
 			this.heartsplus$blinkEndTick = tick + heartsplus$BLINK_TICKS;
@@ -104,6 +104,6 @@ public abstract class AvatarRenderStateMixin implements HealthHolder {
 		this.heartsplus$localPlayer = localPlayer;
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
-		this.heartsplus$visibleGear = hasVisibleGear;
+		this.heartsplus$visibleArmour = hasVisibleArmour;
 	}
 }

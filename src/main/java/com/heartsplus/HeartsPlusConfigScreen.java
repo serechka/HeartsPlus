@@ -42,7 +42,7 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(0, 1, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(1, 0, "heartsplus.config.absorption", HeartsPlusConfig.isShowAbsorption(), HeartsPlusConfig::setShowAbsorption);
 		addToggle(1, 1, "heartsplus.config.stack", HeartsPlusConfig.isStackHearts(), HeartsPlusConfig::setStackHearts);
-		addToggle(2, 0, "heartsplus.config.hide_invisible", HeartsPlusConfig.isHideWhenInvisible(), HeartsPlusConfig::setHideWhenInvisible);
+		addToggle(2, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
 		addToggle(2, 1, "heartsplus.config.hide_sneaking", HeartsPlusConfig.isHideWhenSneaking(), HeartsPlusConfig::setHideWhenSneaking);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(

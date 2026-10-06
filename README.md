@@ -56,8 +56,8 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
 | Show Absorption Hearts | ON | Golden hearts from absorption (golden apples, etc.) |
 | Stack Hearts in Rows | ON | Wrap long bars into rows of 10, growing upward |
-| Hide Invisible Players | ON | Skip players under invisibility |
-| Hide Sneaking Players | OFF | Skip sneaking players |
+| Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
+| Hide Sneaking Players | ON | Skip sneaking players |
 | Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
