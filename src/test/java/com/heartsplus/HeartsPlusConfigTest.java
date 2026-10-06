@@ -34,8 +34,18 @@ class HeartsPlusConfigTest {
 
 		assertTrue(json.contains("\"modEnabled\": true"), json);
 		assertTrue(json.contains("\"showBehindBlocks\": false"), json);
-		assertTrue(json.contains("\"heartOffset\": -10"), json);
+		assertTrue(json.contains("\"blinkAnimation\": true"), json);
+		assertTrue(json.contains("\"heartOffset\": 0"), json);
 		assertFalse(json.contains("showSneakingPlayers"), json);
+	}
+
+	@Test
+	void legacyMinusTenOffsetMigratesToZero() {
+		// -10 was the old default compensating the higher anchor; with the
+		// anchor lowered it must read as "the old default position" = 0.
+		String json = HeartsPlusConfig.serialize(HeartsPlusConfig.parse("{\"heartOffset\": -10}"));
+
+		assertTrue(json.contains("\"heartOffset\": 0"), json);
 	}
 
 	@Test
