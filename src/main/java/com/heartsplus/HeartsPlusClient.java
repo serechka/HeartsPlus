@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -30,39 +31,49 @@ public class HeartsPlusClient {
 	private static KeyMapping openSettingsKey;
 	private static boolean texturesWarmedUp;
 
-	public HeartsPlusClient() {
+	public HeartsPlusClient(ModContainer container) {
 		HeartsPlusConfig.load();
 		LOGGER.info("HeartsPlus client initialized");
-		NeoForge.EVENT_BUS.register(this);
+		// Key-mapping registration is a mod-bus event, client ticks are
+		// game-bus events — and each bus rejects listeners for the other's
+		// events, so the two listeners must be registered separately.
+		container.getEventBus().register(new KeyMappingListener());
+		NeoForge.EVENT_BUS.register(new TickListener());
 	}
 
-	@SubscribeEvent
-	public void registerKeyMappings(RegisterKeyMappingsEvent event) {
-		KeyMapping.Category category = new KeyMapping.Category(
-				Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
-		event.registerCategory(category);
-		toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, category);
-		openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, category);
-		event.register(toggleRenderingKey);
-		event.register(openSettingsKey);
+	/** Mod-bus listeners: registration-time events only. */
+	static final class KeyMappingListener {
+		@SubscribeEvent
+		public void registerKeyMappings(RegisterKeyMappingsEvent event) {
+			KeyMapping.Category category = new KeyMapping.Category(
+					Identifier.fromNamespaceAndPath(HeartsPlus.MOD_ID, "main"));
+			event.registerCategory(category);
+			toggleRenderingKey = new KeyMapping("key.heartsplus.toggle", KEY_UNKNOWN, category);
+			openSettingsKey = new KeyMapping("key.heartsplus.settings", KEY_H, category);
+			event.register(toggleRenderingKey);
+			event.register(openSettingsKey);
+		}
 	}
 
-	@SubscribeEvent
-	public void onClientTick(ClientTickEvent.Post event) {
-		Minecraft client = Minecraft.getInstance();
-		// First tick: register and upload the bundled heart textures before
-		// any frame tries to draw them (lazy mid-frame uploads stay blank).
-		if (!texturesWarmedUp) {
-			texturesWarmedUp = true;
-			HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
-		}
-		while (toggleRenderingKey.consumeClick()) {
-			HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());
-			reportState(client);
-		}
-		while (openSettingsKey.consumeClick()) {
-			if (client.screen == null) {
-				client.setScreen(new HeartsPlusConfigScreen(null));
+	/** Game-bus listeners: per-tick events. */
+	static final class TickListener {
+		@SubscribeEvent
+		public void onClientTick(ClientTickEvent.Post event) {
+			Minecraft client = Minecraft.getInstance();
+			// First tick: register and upload the bundled heart textures before
+			// any frame tries to draw them (lazy mid-frame uploads stay blank).
+			if (!texturesWarmedUp) {
+				texturesWarmedUp = true;
+				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
+			}
+			while (toggleRenderingKey.consumeClick()) {
+				HeartsPlusConfig.setEnabled(!HeartsPlusConfig.isEnabled());
+				reportState(client);
+			}
+			while (openSettingsKey.consumeClick()) {
+				if (client.screen == null) {
+					client.setScreen(new HeartsPlusConfigScreen(null));
+				}
 			}
 		}
 	}
