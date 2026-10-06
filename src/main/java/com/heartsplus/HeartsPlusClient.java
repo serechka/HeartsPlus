@@ -4,18 +4,19 @@ import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
-import net.minecraft.resource.SinglePreparationResourceReloader;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.profiler.Profiler;
 import org.lwjgl.glfw.GLFW;
 
 public class HeartsPlusClient implements ClientModInitializer {
+	/** Keybind category; in this stretch it is a plain string that doubles as the translation key. */
+	private static final String KEY_CATEGORY = "key.category.heartsplus.main";
 	private static KeyBinding toggleRenderingKey;
 	private static KeyBinding openSettingsKey;
 
@@ -26,26 +27,23 @@ public class HeartsPlusClient implements ClientModInitializer {
 
 		// Atlas sprites are re-stitched on resource reloads and their UV
 		// coordinates move, so the renderer's sprite cache must be dropped.
-		ResourceLoader.get(ResourceType.CLIENT_RESOURCES).registerReloader(
-				Identifier.of(HeartsPlus.MOD_ID, "atlas_sprite_cache"),
-				new SinglePreparationResourceReloader<Void>() {
+		ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(
+				new SimpleSynchronousResourceReloadListener() {
 					@Override
-					protected Void prepare(ResourceManager resourceManager, Profiler profiler) {
-						return null;
+					public Identifier getFabricId() {
+						return Identifier.of(HeartsPlus.MOD_ID, "atlas_sprite_cache");
 					}
 
 					@Override
-					protected void apply(Void prepared, ResourceManager resourceManager, Profiler profiler) {
+					public void reload(ResourceManager resourceManager) {
 						HeartsAboveHeadRenderer.invalidateAtlasSprites();
 					}
 				});
 
-		KeyBinding.Category category = KeyBinding.Category.create(
-				Identifier.of(HeartsPlus.MOD_ID, "main"));
 		toggleRenderingKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.heartsplus.toggle", GLFW.GLFW_KEY_UNKNOWN, category));
+				"key.heartsplus.toggle", GLFW.GLFW_KEY_UNKNOWN, KEY_CATEGORY));
 		openSettingsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-				"key.heartsplus.settings", GLFW.GLFW_KEY_H, category));
+				"key.heartsplus.settings", GLFW.GLFW_KEY_H, KEY_CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// Bundled heart textures are only needed in vanilla-texture mode.
