@@ -48,10 +48,10 @@ public class HeartsPlusClient implements ClientModInitializer {
 				"key.heartsplus.settings", KEY_H, category));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
-			// Bundled heart textures are only needed in vanilla-texture mode.
-			// Registration must happen outside a frame (lazy mid-frame uploads
-			// stay blank), so it runs from the first tick with the mode enabled;
-			// the call itself no-ops once warmed.
+			// Default-pack heart textures are only needed in default-texture
+			// mode. Registration must happen outside a frame (lazy mid-frame
+			// uploads stay blank), so it runs from the first tick with the mode
+			// enabled; the call itself no-ops once warmed.
 			if (HeartsPlusConfig.isVanillaTextures()) {
 				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager());
 			}

@@ -26,7 +26,7 @@ Works in survival, PvP, minigames — anywhere knowing your ally's HP matters.
 - **Damage blink** — hearts flash after damage with the vanilla HUD animation, including the pre-drop highlight
 - **Status variants** — poisoned, withered and frozen hearts, chosen with the same priority as the vanilla HUD
 - **Smart stacking** — long health bars wrap into rows of 10 and grow upward, never covering nametags
-- **Texture source toggle** — take hearts from your active resource pack, or lock them to the classic vanilla look
+- **Texture source toggle** — take hearts from your active resource pack, or pull them from Minecraft's built-in default pack
 - **In-game config screen** — integrates with Mod Menu on Fabric, or open it with a keybind
 - **11 languages** — English, Русский, Українська, 中文, Español, Português (BR), Deutsch, Français, 日本語, 한국어, Italiano
 - **Angle-independent shading** — hearts stay perfectly readable from above or below
@@ -63,10 +63,10 @@ Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press **H** anywhere
 | Show Above Yourself | OFF | Draw hearts above your own player (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
 | Show Behind Blocks | OFF | On = hearts stay visible through walls (depth-test-free second pass) |
-| Heart Textures | Resource Pack | Resource-pack sprites or the built-in vanilla set |
+| Heart Textures | Current Pack | The active resource pack, or pull the built-in default-pack hearts |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
-| Height Offset | −10 | Fine-tune the height above the head, −20 – +40 |
+| Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
 
@@ -124,7 +124,7 @@ rendering era needs its own port.
 
 ## Credits
 
-- Vanilla heart sprites used by the built-in texture mode come from Minecraft itself.
+- Default-texture mode loads its heart sprites straight from Minecraft's own default resource pack.
 
 ## License
 
