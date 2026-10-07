@@ -26,8 +26,13 @@ public final class HeartsPlusConfig {
 	public static final double MAX_RENDER_DISTANCE = 128.0;
 	public static final int MIN_HEART_OFFSET = -20;
 	public static final int MAX_HEART_OFFSET = 40;
-	/** Default bar lift above the fixed anchor, in GUI pixels ("ideal height" reported by playtesting). */
-	public static final int DEFAULT_HEART_OFFSET = 0;
+	/**
+	 * Default bar lift above the fixed anchor, in GUI pixels: the height the
+	 * owner playtested as ideal in 0.4.6. Stored configs are deliberately not
+	 * migrated — a saved 0 meant "no extra lift" before this change and still
+	 * means exactly that.
+	 */
+	public static final int DEFAULT_HEART_OFFSET = 10;
 	/**
 	 * heartOffset stored by pre-0.4.4 configs. It was the default compensation
 	 * for the old, higher anchor; the anchor now carries that compensation, so
@@ -36,6 +41,8 @@ public final class HeartsPlusConfig {
 	 * accepted, since the value only ever existed as that compensation.
 	 */
 	private static final int LEGACY_HEART_OFFSET = -10;
+	/** Where a {@link #LEGACY_HEART_OFFSET} lands: the old default's on-screen position, independent of {@link #DEFAULT_HEART_OFFSET}. */
+	private static final int LEGACY_DEFAULT_LANDING = 0;
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
@@ -86,7 +93,8 @@ public final class HeartsPlusConfig {
 	 * When true (default) hearts are drawn like a name tag: the depth-tested
 	 * pass plus a dimmed half-transparent see-through copy that stays visible
 	 * through blocks. When false only the depth-tested pass is drawn, so walls
-	 * hide the hearts. Sneaking players never get hearts either way.
+	 * hide the hearts. Sneaking players keep only that pass either way, like a
+	 * vanilla name tag on sneak.
 	 */
 	public static boolean isShowBehindBlocks() {
 		return instance.showBehindBlocks;
@@ -225,7 +233,9 @@ public final class HeartsPlusConfig {
 	 */
 	private void migrate() {
 		if (heartOffset == LEGACY_HEART_OFFSET) {
-			heartOffset = DEFAULT_HEART_OFFSET;
+			// Land on the position the legacy default actually rendered at
+			// (anchor 2.10 + 0), not on the new 0.4.6 playtested default.
+			heartOffset = LEGACY_DEFAULT_LANDING;
 		}
 	}
 
