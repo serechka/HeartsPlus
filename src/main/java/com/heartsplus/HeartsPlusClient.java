@@ -11,6 +11,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
@@ -43,6 +44,7 @@ public class HeartsPlusClient {
 		container.getEventBus().register(new KeyMappingListener());
 		container.getEventBus().register(new ResourceReloadListener());
 		NeoForge.EVENT_BUS.register(new TickListener());
+		NeoForge.EVENT_BUS.register(new ConnectionListener());
 	}
 
 	/** Mod-bus listeners: registration-time events only. */
@@ -90,6 +92,19 @@ public class HeartsPlusClient {
 					client.setScreen(new HeartsPlusConfigScreen(null));
 				}
 			}
+		}
+	}
+
+	/** Game-bus listener: the play connection ending. */
+	static final class ConnectionListener {
+		@SubscribeEvent
+		public void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+			// Per-player state is keyed by UUID and must never outlive the play
+			// session: a rejoin hands the same UUID a fresh entity whose tick
+			// counter restarted, and stale blink windows would flash afterwards.
+			// execute() pins the clear onto the render thread, where the tracker
+			// lives (the disconnect hook can fire on a network thread).
+			Minecraft.getInstance().execute(HeartsAboveHeadRenderer::clearPerPlayerState);
 		}
 	}
 

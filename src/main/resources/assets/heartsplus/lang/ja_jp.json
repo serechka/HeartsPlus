@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "体力インジケーターを有効にしました",
   "heartsplus.message.disabled": "体力インジケーターを無効にしました",
   "heartsplus.config.show_invisible": "透明を表示",
+  "heartsplus.config.show_invisible.tooltip": "一部のサーバーでは禁止されている場合があります。サーバーのルールを確認してください。体力が表示されるのは、防具を着けた透明なプレイヤーのみです。",
   "heartsplus.config.show_behind_blocks": "ブロックの向こうも表示"
 }
