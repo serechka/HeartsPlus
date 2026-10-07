@@ -28,6 +28,8 @@ server, no setup, and know your ally's HP before the fight starts.
 - **Yours to tune** — scale, height, render distance, texture source, animation toggle; everything changes in-game and applies instantly
 - **11 languages** — English, Русский, Українська, 中文, Español, Português (BR), Deutsch, Français, 日本語, 한국어, Italiano
 
+> Note: invisible players show their health only while wearing armour, and never through walls. A mod like this may be against the rules on some servers — check them before using it there.
+
 ## Versions and branches
 
 One branch per rendering era — each branch ships one jar covering its whole
