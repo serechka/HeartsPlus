@@ -24,22 +24,19 @@ public interface HealthHolder {
 
 	boolean heartsplus$isFrozen();
 
-	/** True while Regeneration runs; the bouncing heart follows it like the vanilla HUD. */
-	boolean heartsplus$isRegenerating();
-
 	/** True while the player wears any armour piece; armour betrays invisible players. */
 	boolean heartsplus$hasVisibleArmour();
 
-	/** Game tick the animation state was last advanced to. */
-	int heartsplus$getAnimationTick();
+	/** First half-heart index carrying a blinking overlay sprite (inclusive); empty range when none. */
+	int heartsplus$getBlinkOverlayStart();
 
-	/** The lagging vanilla displayHealth copy, in half-hearts. */
-	int heartsplus$getDisplayHealth();
+	/** Half-heart index after the last blinking overlay sprite (exclusive). */
+	int heartsplus$getBlinkOverlayEnd();
 
 	/** True on the on-frames of the vanilla blink flash for the current tick. */
 	boolean heartsplus$isBlinking();
 
 	void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen, boolean regenerating, boolean hasVisibleArmour, int tick,
+			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour, int tick,
 			boolean invulnerable);
 }

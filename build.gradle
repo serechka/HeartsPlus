@@ -4,7 +4,8 @@ plugins {
 
 // This branch targets the legacy 1.21.x line using Yarn mappings.
 // Built against the oldest era release (1.21.9); the jar runs on 1.21.9-1.21.10.
-version = "${project.mod_version}-1.21.9-fabric"
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+1.21.9-fabric.jar
+version = project.mod_version
 group = project.maven_group
 
 base {
