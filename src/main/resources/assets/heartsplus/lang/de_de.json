@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "Herzanzeigen aktiviert",
   "heartsplus.message.disabled": "Herzanzeigen deaktiviert",
   "heartsplus.config.show_invisible": "Unsichtbare zeigen",
+  "heartsplus.config.show_invisible.tooltip": "Kann auf manchen Servern verboten sein – bitte die Serverregeln beachten. Gesundheit wird nur bei unsichtbaren Spielern mit Rüstung angezeigt.",
   "heartsplus.config.show_behind_blocks": "Hinter Blöcken anzeigen"
 }

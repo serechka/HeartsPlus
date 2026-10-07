@@ -1,9 +1,11 @@
 package com.heartsplus;
 
+import com.heartsplus.render.BlinkTracker;
 import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.KeyMapping;
@@ -46,6 +48,13 @@ public class HeartsPlusClient implements ClientModInitializer {
 				"key.heartsplus.toggle", KEY_UNKNOWN, category));
 		openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
 				"key.heartsplus.settings", KEY_H, category));
+
+		// Per-player state is keyed by UUID and must never outlive the play
+		// session: a rejoin hands the same UUID a fresh entity whose tick
+		// counter restarted, and stale blink windows would flash afterwards.
+		// execute() pins the clear onto the render thread, where the tracker
+		// lives (the disconnect hook can fire on a network thread).
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(BlinkTracker::clear));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			// Default-pack heart textures are only needed in default-texture

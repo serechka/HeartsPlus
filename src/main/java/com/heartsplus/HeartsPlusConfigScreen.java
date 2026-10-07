@@ -8,6 +8,7 @@ import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
@@ -40,7 +41,8 @@ public class HeartsPlusConfigScreen extends Screen {
 		this.grid.rowSpacing(6).columnSpacing(10);
 		addToggle(0, 0, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(0, 1, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
-		addToggle(1, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
+		addToggle(1, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(),
+				HeartsPlusConfig::setShowInvisiblePlayers, "heartsplus.config.show_invisible.tooltip");
 		addToggle(1, 1, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(
@@ -99,8 +101,16 @@ public class HeartsPlusConfigScreen extends Screen {
 	}
 
 	private void addToggle(int row, int column, String key, boolean initial, Consumer<Boolean> setter) {
+		addToggle(row, column, key, initial, setter, null);
+	}
+
+	private void addToggle(int row, int column, String key, boolean initial, Consumer<Boolean> setter,
+			String tooltipKey) {
 		CycleButton<Boolean> button = CycleButton.onOffBuilder(initial)
 				.create(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable(key), (btn, value) -> setter.accept(value));
+		if (tooltipKey != null) {
+			button.setTooltip(Tooltip.create(Component.translatable(tooltipKey)));
+		}
 		this.grid.addChild(button, row, column);
 	}
 
