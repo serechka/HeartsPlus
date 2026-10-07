@@ -44,8 +44,9 @@ import org.slf4j.Logger;
  *
  * <p>Hearts are drawn with the world-text render layers, which — like name
  * tags — are shaded only by the lightmap, so they look identical from every
- * viewing angle. The anchor height is a fixed constant so the bar never jumps
- * with pose changes. Sprites, pass structure and the animation all mirror
+ * viewing angle. The anchor rides the vanilla name tag attachment point,
+ * smoothed per player, so the bar sits right above the tag and glides with
+ * it through pose changes. Sprites, pass structure and the animation all mirror
  * the vanilla HUD (InGameHud.renderHealthBar): containers deepest, then
  * absorption, then the blink overlay, with the health hearts on top — the
  * same painter order the HUD uses, flattened onto z layers. The pass set
@@ -82,14 +83,33 @@ public final class HeartsAboveHeadRenderer {
 	private static int suppressedFailures;
 
 	/**
-	 * Fixed height above the entity origin where the heart bar sits. Since
-	 * 0.4.7 it includes the old default 10px lift (10 GUI px × 0.025), so the
-	 * Height Offset setting reads 0 exactly at the owner-tuned height and
-	 * tunes up and down symmetrically. Deliberately not derived from
-	 * nameLabelPos/height: the nameplate position sags in the sneak pose
-	 * with interpolation lag, which made the hearts jump.
+	 * Height above the entity origin where the heart bar sits for a standing
+	 * player — the owner-tuned 0.4.7 anchor, which includes the old default
+	 * 10px lift (10 GUI px × 0.025), so the Height Offset setting reads 0
+	 * exactly at that height and tunes up and down symmetrically. Since 0.4.8
+	 * it is the fallback and the gap calibration point: the live anchor rides
+	 * the vanilla name tag attachment point via {@link #heartAnchorForAttachment}.
 	 */
 	private static final float HEART_ANCHOR_HEIGHT = 2.35F;
+	/**
+	 * Name tag attachment height of a standing player. The player type
+	 * declares no explicit NAME_TAG attachment, so it falls back to
+	 * {@code EntityAttachmentType.Point.AT_HEIGHT} of the standing dimensions —
+	 * {@code EntityType.PLAYER} registers {@code dimensions(0.6F, 1.8F)} —
+	 * i.e. the bounding box height, 1.8. The pose-specific dimensions
+	 * (crouching 1.5, swimming/fall-flying 0.6) lower the same attachment
+	 * point, which is what the bar now glides along.
+	 */
+	private static final float STANDING_ATTACHMENT_Y = 1.8F;
+	/**
+	 * Vanilla lifts the name tag text half a block above the attachment point
+	 * (LabelCommandRenderer.Commands.add: {@code translate(..., y + 0.5, ...)}),
+	 * so 2.3 is the tag's top edge for a standing player. The owner-tuned
+	 * anchor 2.35 floats exactly {@code 2.35 − (1.8 + 0.5) = 0.05} above it.
+	 */
+	private static final float NAMETAG_TEXT_LIFT = 0.5F;
+	/** Fixed gap between the name tag's top edge and the heart bar's bottom edge. */
+	private static final float NAMETAG_GAP = HEART_ANCHOR_HEIGHT - STANDING_ATTACHMENT_Y - NAMETAG_TEXT_LIFT;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	private static final Identifier GUI_ATLAS = Identifier.ofVanilla("textures/atlas/gui.png");
 	/** Vanilla name tag text is drawn with this much extra light emission (LabelCommandRenderer). */
@@ -98,6 +118,16 @@ public final class HeartsAboveHeadRenderer {
 	private static final int SEE_THROUGH_ALPHA = 0x80;
 
 	private HeartsAboveHeadRenderer() {
+	}
+
+	/**
+	 * The heart anchor for a name tag attachment at {@code attachmentY}:
+	 * vanilla's half-block text lift plus the fixed gap, calibrated so a
+	 * standing player (attachment 1.8) renders the bar at the untouched
+	 * 0.4.7 height of 2.35.
+	 */
+	static float heartAnchorForAttachment(float attachmentY) {
+		return attachmentY + NAMETAG_TEXT_LIFT + NAMETAG_GAP;
 	}
 
 	/**
@@ -211,7 +241,11 @@ public final class HeartsAboveHeadRenderer {
 		int overlayTo = health.heartsplus$getBlinkOverlayEnd();
 
 		matrices.push();
-		matrices.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
+		// The bar rides the vanilla name tag attachment point (smoothed per
+		// player in BlinkTracker), so it sits right above the tag and glides
+		// with it through sneak/swim/fly poses. Extract always precedes
+		// render for a rendered state, so the value is fresh for this frame.
+		matrices.translate(0.0F, health.heartsplus$getHeartAnchorY(), 0.0F);
 		// multiply(x, 0, 0, 0) around the origin equals a plain rotation; this
 		// MatrixStack overload (the Yarn name of 26.x rotateAround) is the only
 		// quaternion-rotation call shared by every supported game version.
@@ -228,7 +262,7 @@ public final class HeartsAboveHeadRenderer {
 		// offsets the depth test z-fights the quads apart. The layer index
 		// doubles as the see-through submit order (HeartPass.renderOrder).
 		float zStep = HeartLayerSpacing.zStep(MathHelper.sqrt((float) state.squaredDistanceToCamera));
-		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, HeartsPlusConfig.isShowBehindBlocks());
+		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, state.invisible, HeartsPlusConfig.isShowBehindBlocks());
 		final float containerZ = 0.0F;
 		final float absorbingZ = zStep;
 		final float familyBlinkingZ = 2 * zStep;
