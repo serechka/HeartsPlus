@@ -39,10 +39,27 @@ public final class HeartAnimationState {
 	 * the same gate the vanilla HUD applies against noisy health drift. With
 	 * the animation off no window is armed, but {@code lastHealth} still
 	 * tracks, so re-enabling cannot flash a change that happened meanwhile.
+	 *
+	 * @return true when the tick counter moved backwards — the entity behind
+	 * this UUID was recreated (world or server switch, chunk reload) and the
+	 * state was reset; the caller must drop any companion state (height
+	 * smoothing) the old entity fed too.
 	 */
-	public void tick(int currentHealth, int tick, boolean invulnerable, boolean animationEnabled) {
+	public boolean tick(int currentHealth, int tick, boolean invulnerable, boolean animationEnabled) {
 		if (tick == this.lastSeenTick) {
-			return;
+			return false;
+		}
+		if (tick < this.lastSeenTick) {
+			// The tick counter restarted under the same UUID. Every window here
+			// is built from the old counter, so its square wave would thrash on
+			// for ages (the stale 0.4.7 flicker); drop it all and re-baseline.
+			this.lastSeenTick = tick;
+			this.blinkEndTick = 0;
+			this.blinkOverlayStart = 0;
+			this.blinkOverlayEnd = 0;
+			this.blinking = false;
+			this.lastHealth = currentHealth;
+			return true;
 		}
 		this.lastSeenTick = tick;
 		this.blinking = animationEnabled && this.blinkEndTick > tick
@@ -63,6 +80,7 @@ public final class HeartAnimationState {
 			}
 		}
 		this.lastHealth = currentHealth;
+		return false;
 	}
 
 	/** True on the on-frames of the blink flash for the current tick. */

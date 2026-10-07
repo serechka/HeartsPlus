@@ -6,7 +6,7 @@ plugins {
 // (1.21.2/1.21.3, Mojang mappings). Those versions still render through the
 // classic LivingEntityRenderer.render path; only the bootstrap and packaging
 // are NeoForge.
-// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+1.21.2-neoforge.jar
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.8+1.21.2-neoforge.jar
 version = project.mod_version
 group = project.maven_group
 
