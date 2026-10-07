@@ -4,7 +4,7 @@ plugins {
 
 // This branch targets the legacy 1.21.x line using Yarn mappings.
 // Targets the 1.21.6-1.21.8 stretch, which still has the classic render path.
-// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+1.21.6-fabric.jar
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.8+1.21.6-fabric.jar
 version = project.mod_version
 group = project.maven_group
 

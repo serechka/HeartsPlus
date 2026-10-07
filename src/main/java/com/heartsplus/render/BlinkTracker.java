@@ -4,33 +4,50 @@ import com.heartsplus.HeartsPlusConfig;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.MathHelper;
 
 /**
- * Per-player vanilla health-animation history, keyed by the entity UUID.
- * Deliberately lives outside the render state: vanilla hands out recycled
- * render states for every frame, and storing the history on the state
- * silently reset it, killing the animation. Render-thread only — both the
- * state update and the render phases run there — so the plain map needs no
- * locking; entries of despawned players are collected weakly.
+ * Per-player vanilla health-animation history and smoothed heart height,
+ * keyed by the entity UUID. Deliberately lives outside the render state:
+ * vanilla hands out recycled render states for every frame, and storing the
+ * history on the state silently reset it, killing the animation. Render-thread
+ * only — both the state update and the render phases run there — so the plain
+ * maps need no locking; entries of despawned players are collected weakly.
+ *
+ * <p>Both maps are dropped in {@link #clear()} when the play connection
+ * ends: a rejoin hands the same UUID a fresh entity whose tick counter
+ * restarted, and stale state would replay old blink windows (the 0.4.7
+ * flicker).</p>
  */
 public final class BlinkTracker {
 	private static final Map<UUID, HeartAnimationState> animationStates = new WeakHashMap<>();
+	private static final Map<UUID, HeartHeightSmoother> heightSmoothers = new WeakHashMap<>();
 
 	private BlinkTracker() {
 	}
 
 	/**
-	 * Feeds the current health of a player into the vanilla animation model.
-	 * The per-tick guard inside {@link HeartAnimationState} keeps the repeated
+	 * Feeds the current health of a player into the vanilla animation model
+	 * and the current name tag attachment height into its height smoother,
+	 * returning the height the heart bar should draw at this frame. The
+	 * per-tick guard inside {@link HeartAnimationState} keeps the repeated
 	 * per-frame state updates from advancing the animation more than once per
 	 * game tick — the cadence the vanilla HUD ticks with. With the animation
 	 * toggle off the state still tracks the health (so re-enabling cannot
 	 * flash a change that happened meanwhile) but arms no windows.
 	 */
-	public static void update(UUID playerId, float health, int tick, boolean invulnerable) {
-		animationStates.computeIfAbsent(playerId, id -> new HeartAnimationState())
-				.tick(MathHelper.ceil(health), tick, invulnerable, HeartsPlusConfig.isBlinkAnimationEnabled());
+	public static float update(UUID playerId, float health, int tick, boolean invulnerable, float attachmentY) {
+		HeartAnimationState state = animationStates.computeIfAbsent(playerId, id -> new HeartAnimationState());
+		boolean entityRecreated = state.tick(MathHelper.ceil(health), tick, invulnerable, HeartsPlusConfig.isBlinkAnimationEnabled());
+		float targetY = HeartsAboveHeadRenderer.heartAnchorForAttachment(attachmentY);
+		HeartHeightSmoother smoother = heightSmoothers.computeIfAbsent(playerId, id -> new HeartHeightSmoother());
+		if (entityRecreated) {
+			// Same UUID, new entity (world/server switch, chunk reload): the
+			// spec says the height snaps with the reset instead of sliding.
+			smoother.snapTo(targetY);
+		}
+		return smoother.update(targetY, Util.getMeasuringTimeMs());
 	}
 
 	/** First half-heart index carrying a blinking overlay sprite (inclusive); 0 when the overlay is empty. */
@@ -49,5 +66,11 @@ public final class BlinkTracker {
 	public static boolean isBlinking(UUID playerId) {
 		HeartAnimationState state = animationStates.get(playerId);
 		return state != null && state.isBlinking();
+	}
+
+	/** Drops every per-player state; registered on the play-connection disconnect. */
+	public static void clear() {
+		animationStates.clear();
+		heightSmoothers.clear();
 	}
 }
