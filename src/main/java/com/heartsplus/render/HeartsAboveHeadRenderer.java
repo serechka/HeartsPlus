@@ -95,8 +95,9 @@ public final class HeartsAboveHeadRenderer {
 	private static final float HEART_ANCHOR_HEIGHT = 2.35F;
 	/**
 	 * Name tag attachment height of a standing player. The player type
-	 * declares no explicit NAME_TAG attachment, so {@code getPointNullable}
-	 * returns null and the bar reads the bounding box height instead —
+	 * declares no explicit NAME_TAG attachment, so the build fills every
+	 * attachment with the AT_HEIGHT fallback (the current pose dimensions) —
+	 * the null branch below is only a guard;
 	 * {@code PlayerEntity.STANDING_DIMENSIONS = EntityDimensions.changing(0.6F, 1.8F)}
 	 * — i.e. 1.8. The pose-specific dimensions (crouching 1.5, swimming/
 	 * fall-flying 0.6) lower the same fallback, which is what the bar now
@@ -400,8 +401,9 @@ public final class HeartsAboveHeadRenderer {
 	/**
 	 * The Y of the vanilla name tag attachment point, computed with the same
 	 * call EntityRenderer.renderLabelIfPresent makes for its own label — the
-	 * player type declares no NAME_TAG attachment, so the call returns null
-	 * for players and the bar reads the bounding box height instead. The
+	 * player type declares no explicit NAME_TAG attachment, so the build
+	 * fills it with the AT_HEIGHT fallback (current pose dimensions); the
+	 * null branch is only a guard. The
 	 * point follows the pose (standing 1.8, crouching 1.5, swimming 0.6)
 	 * because {@code getAttachments} serves the current pose dimensions.
 	 */
