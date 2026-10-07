@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -50,13 +51,15 @@ import org.slf4j.Logger;
  * with pose changes. Sprites, pass structure and the animation all mirror the
  * vanilla HUD (Gui.renderHearts): containers deepest, then absorption, then
  * the blink overlay, with the health hearts on top — the same painter order
- * the HUD uses, flattened onto z layers. Sneaking players get nothing,
- * exactly like the see-through part of a vanilla name tag; everyone else gets
- * the two nametag passes — a depth-tested one and, when "show behind blocks"
- * is on, a dimmed half-transparent see-through copy. Geometry is submitted in
- * passes per texture (containers, absorption, blinking, health) because
- * default-texture mode binds individual sprites instead of the shared GUI
- * atlas.</p>
+ * the HUD uses, flattened onto z layers. The pass set mirrors
+ * EntityRenderer.renderNameTag: everyone gets the depth-tested bright pass,
+ * players who are not sneaking additionally get a dimmed half-transparent
+ * see-through copy when "show behind blocks" is on, and a sneaking player
+ * gets only the bright pass (the label gates its see-through copy on
+ * !isDiscrete) — bright in the open, hidden behind blocks. Geometry is
+ * submitted in passes per texture (containers, absorption, blinking, health)
+ * because default-texture mode binds individual sprites instead of the
+ * shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -188,19 +191,10 @@ public final class HeartsAboveHeadRenderer {
 		}
 
 		float health = player.getHealth();
-		// The animation state is fed before the sneak gate, so the vanilla
-		// animation keeps ticking for every rendered player even while their
-		// hearts are not drawn.
+		// The animation state is fed before the pass selection below, so the
+		// vanilla animation keeps ticking for every rendered player.
 		HeartAnimationState animationState = PlayerBlinkTracker.stateFor(player.getUUID());
 		animationState.tick(Mth.ceil(health), player.tickCount, Util.getMillis(), player.invulnerableTime > 0);
-		if (player.isDiscrete()) {
-			// A sneaking player's name tag drops its see-through copy
-			// (EntityRenderer.renderNameTag gates it on !isDiscrete), so a
-			// sneaking player behind blocks shows nothing at all. The hearts
-			// follow that rule unconditionally.
-			skipOnce("player is sneaking");
-			return;
-		}
 
 		// With the animation off the bar is static: no blink windows and no
 		// displayHealth lag, so the blink passes are skipped entirely and their
@@ -237,78 +231,106 @@ public final class HeartsAboveHeadRenderer {
 		// absorption) cost nothing at all. Each family sits on its own z layer
 		// in the HUD's painter order: containers deepest, then absorption, then
 		// the blink overlay, with the health hearts on top — without the
-		// offsets the depth test z-fights the quads apart.
+		// offsets the depth test z-fights the quads apart. The layer index
+		// doubles as the see-through submit order (HeartPass.renderOrder).
 		float zStep = HeartLayerSpacing.zStep(Mth.sqrt((float) dispatcher.distanceToSqr(player)));
 		final float containerZ = 0.0F;
 		final float absorbingZ = zStep;
 		final float familyBlinkingZ = 2 * zStep;
 		final float familyZ = 3 * zStep;
 
+		List<HeartSubmit> submits = new ArrayList<>();
 		ResolvedSprite container = resolve(HeartType.CONTAINER, false, blinking, spriteManager);
-		submitPass(bufferSource, poseStack, container, containerZ, packedLight, (vertices, matrix, light, alpha) -> {
+		submits.add(new HeartSubmit(container, 0, (vertices, matrix, light, alpha) -> {
 			for (int slot = 0; slot < layout.slots(); slot++) {
 				emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), container, light, containerZ, alpha);
 			}
-		});
+		}));
 		if (hasAbsorption(layout, false)) {
 			ResolvedSprite absorbingFull = resolve(absorptionFamily, false, false, spriteManager);
-			submitPass(bufferSource, poseStack, absorbingFull, absorbingZ, packedLight, (vertices, matrix, light, alpha) -> {
+			submits.add(new HeartSubmit(absorbingFull, 1, (vertices, matrix, light, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && !layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingFull, light, absorbingZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (hasAbsorption(layout, true)) {
 			ResolvedSprite absorbingHalf = resolve(absorptionFamily, true, false, spriteManager);
-			submitPass(bufferSource, poseStack, absorbingHalf, absorbingZ, packedLight, (vertices, matrix, light, alpha) -> {
+			submits.add(new HeartSubmit(absorbingHalf, 1, (vertices, matrix, light, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingHalf, light, absorbingZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (blinking) {
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, spriteManager);
-			submitPass(bufferSource, poseStack, familyFullBlinking, familyBlinkingZ, packedLight, (vertices, matrix, light, alpha) -> {
+			submits.add(new HeartSubmit(familyFullBlinking, 2, (vertices, matrix, light, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasBlinkHeart(slot) && !layout.isBlinkHalf(slot)) {
 						emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFullBlinking, light, familyBlinkingZ, alpha);
 					}
 				}
-			});
+			}));
 			if (hasBlinkHalf(layout)) {
 				ResolvedSprite familyHalfBlinking = resolve(family, true, true, spriteManager);
-				submitPass(bufferSource, poseStack, familyHalfBlinking, familyBlinkingZ, packedLight, (vertices, matrix, light, alpha) -> {
+				submits.add(new HeartSubmit(familyHalfBlinking, 2, (vertices, matrix, light, alpha) -> {
 					for (int slot = 0; slot < layout.slots(); slot++) {
 						if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
 							emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalfBlinking, light, familyBlinkingZ, alpha);
 						}
 					}
-				});
+				}));
 			}
 		}
 		if (hasHealth(layout, false)) {
 			ResolvedSprite familyFull = resolve(family, false, false, spriteManager);
-			submitPass(bufferSource, poseStack, familyFull, familyZ, packedLight, (vertices, matrix, light, alpha) -> {
+			submits.add(new HeartSubmit(familyFull, 3, (vertices, matrix, light, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && !layout.isHealthHalf(slot)) {
 						emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFull, light, familyZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (hasHealth(layout, true)) {
 			ResolvedSprite familyHalf = resolve(family, true, false, spriteManager);
-			submitPass(bufferSource, poseStack, familyHalf, familyZ, packedLight, (vertices, matrix, light, alpha) -> {
+			submits.add(new HeartSubmit(familyHalf, 3, (vertices, matrix, light, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot)) {
 						emitHeart(vertices, matrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalf, light, familyZ, alpha);
 					}
 				}
-			});
+			}));
+		}
+
+		// HeartPass.renderOrder pins every see-through layer (orders 0-3, the
+		// list order above) below the bright pass (order 4). This era has no
+		// submit orders to route the passes to: the text render types are not
+		// in the seeded fixedBuffers of the entity MultiBufferSource
+		// (RenderBuffers), so BufferSource.getBuffer falls back to the shared
+		// buffer and draws the previous batch the moment a different type is
+		// requested — the draw order is the submission order. Two sweeps
+		// therefore realize the orders: all see-through layers first, the
+		// bright pass last. Vanilla name tags get the same order by submitting
+		// their see-through copy before the bright text
+		// (EntityRenderer.renderNameTag); independently, the world pass
+		// quad-sorts every batch back-to-front (MeshData.sortQuads on the
+		// translucent text types, the projection's distance sorting), which
+		// also restores the painter order inside each batch.
+		List<HeartPass> passes = HeartPass.passesFor(player.isDiscrete(), HeartsPlusConfig.isShowBehindBlocks());
+		if (passes.contains(HeartPass.SEE_THROUGH)) {
+			for (HeartSubmit submit : submits) {
+				submitPass(bufferSource, poseStack, submit.sprite(), packedLight, HeartPass.SEE_THROUGH, submit.geometry());
+			}
+		}
+		if (passes.contains(HeartPass.NORMAL)) {
+			for (HeartSubmit submit : submits) {
+				submitPass(bufferSource, poseStack, submit.sprite(), packedLight, HeartPass.NORMAL, submit.geometry());
+			}
 		}
 
 		poseStack.popPose();
@@ -436,21 +458,33 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	/**
-	 * Submits one sprite's geometry as the two vanilla name tag passes
-	 * (EntityRenderer.renderNameTag): a depth-tested one with the plain light
-	 * coords, and — when the option is on — a see-through copy without depth
-	 * test, dimmed to the name tag's half-transparent white (0x20FFFFFF) and
-	 * lit by the same plain light coords.
+	 * Submits one sprite's geometry as the single vanilla name tag pass
+	 * selected by {@code pass} (EntityRenderer.renderNameTag): the
+	 * depth-tested bright one with the plain light coords, or the see-through
+	 * copy without depth test, dimmed to the name tag's half-transparent
+	 * white (0x20FFFFFF) and lit by the same plain light coords.
+	 *
+	 * <p>The passes must draw in a fixed order — see-through layers below the
+	 * bright pass — which this era gets from the submission sweeps in
+	 * {@link #renderHearts}: BufferSource.getBuffer falls back to the shared
+	 * buffer for the text types (they are absent from the seeded
+	 * fixedBuffers) and immediately draws the previous batch when a different
+	 * type is requested, so the draw order is the submission order.</p>
 	 */
 	private static void submitPass(MultiBufferSource bufferSource, PoseStack poseStack,
-			ResolvedSprite sprite, float z, int packedLight, PassGeometry geometry) {
+			ResolvedSprite sprite, int packedLight, HeartPass pass, PassGeometry geometry) {
 		Matrix4f matrix = poseStack.last().pose();
-		VertexConsumer vertices = bufferSource.getBuffer(RenderType.text(sprite.texture()));
-		geometry.emit(vertices, matrix, packedLight, 255);
-		if (HeartsPlusConfig.isShowBehindBlocks()) {
+		if (pass == HeartPass.SEE_THROUGH) {
 			VertexConsumer seeThrough = bufferSource.getBuffer(RenderType.textSeeThrough(sprite.texture()));
 			geometry.emit(seeThrough, matrix, packedLight, SEE_THROUGH_ALPHA);
+		} else {
+			VertexConsumer vertices = bufferSource.getBuffer(RenderType.text(sprite.texture()));
+			geometry.emit(vertices, matrix, packedLight, 255);
 		}
+	}
+
+	/** One sprite family's geometry plan, in the see-through submit order of {@link HeartPass#renderOrder}. */
+	private record HeartSubmit(ResolvedSprite sprite, int layerIndex, PassGeometry geometry) {
 	}
 
 	/** One emitted quad set for a single texture pass, parameterised by the per-pass light and alpha. */
