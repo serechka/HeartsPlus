@@ -7,6 +7,7 @@ import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
@@ -49,12 +50,14 @@ import org.slf4j.Logger;
  * jumps with pose changes. Sprites, pass structure and the animation all
  * mirror the vanilla HUD (InGameHud.renderHealthBar): containers deepest,
  * then absorption, then the blink overlay, with the health hearts on top —
- * the same painter order the HUD uses, flattened onto z layers. Sneaking
- * players get nothing, exactly like the see-through part of a vanilla name
- * tag; everyone else gets the two nametag passes — a depth-tested one and,
- * when "show behind blocks" is on, a dimmed half-transparent see-through
- * copy. Geometry is drawn in passes per texture (containers, health,
- * blinking, absorption) because default-texture mode binds individual
+ * the same painter order the HUD uses, flattened onto z layers. The pass set
+ * mirrors EntityRenderer.renderLabelIfPresent: everyone gets the depth-tested
+ * bright pass, players who are not sneaking additionally get a dimmed
+ * half-transparent see-through copy when "show behind blocks" is on, and a
+ * sneaking player gets only the bright pass (renderLabelIfPresent passes
+ * !sneaking as the label's TextLayerType) — bright in the open, hidden
+ * behind blocks. Geometry is drawn in passes per texture (containers,
+ * health, blinking, absorption) because default-texture mode binds individual
  * sprites instead of the shared GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
@@ -167,14 +170,6 @@ public final class HeartsAboveHeadRenderer {
 			skipOnce("own player hidden (enable 'Show above yourself')");
 			return;
 		}
-		if (state.sneaking) {
-			// Vanilla never hides a sneaking player's solid name tag but drops
-			// its see-through copy (renderLabelIfPresent passes !sneaking as the
-			// nametag's see-through flag), so a sneaking player behind blocks
-			// shows nothing at all. The hearts follow that rule unconditionally.
-			skipOnce("player is sneaking");
-			return;
-		}
 		double maxDistance = HeartsPlusConfig.getRenderDistance();
 		if (state.squaredDistanceToCamera > maxDistance * maxDistance) {
 			skipOnce("player beyond the render distance");
@@ -225,79 +220,87 @@ public final class HeartsAboveHeadRenderer {
 		// absorption) cost nothing at all. Each family sits on its own z layer
 		// in the HUD's painter order: containers deepest, then absorption, then
 		// the blink overlay, with the health hearts on top — without the
-		// offsets the depth test z-fights the quads apart.
+		// offsets the depth test z-fights the quads apart. The painter order
+		// doubles as the see-through submit order (HeartPass.renderOrder):
+		// drawPhases emits every see-through layer before any bright pass.
 		float zStep = HeartLayerSpacing.zStep(MathHelper.sqrt((float) state.squaredDistanceToCamera));
 		final float containerZ = 0.0F;
 		final float absorbingZ = zStep;
 		final float familyBlinkingZ = 2 * zStep;
 		final float familyZ = 3 * zStep;
 
+		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, HeartsPlusConfig.isShowBehindBlocks());
+		List<FamilyDraw> barDraws = new ArrayList<>();
+		int emissiveLight = LightmapTextureManager.applyEmission(light, NAMETAG_EMISSION);
+
 		ResolvedSprite container = resolve(HeartType.CONTAINER, false, blinking, guiAtlasManager);
-		drawPass(vertexConsumers, container, containerZ, light, (vertices, passLight, alpha) -> {
+		barDraws.add(new FamilyDraw(container, (vertices, passLight, alpha) -> {
 			for (int slot = 0; slot < layout.slots(); slot++) {
 				emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), container, passLight, containerZ, alpha);
 			}
-		});
+		}));
 		if (hasAbsorption(layout, false)) {
 			ResolvedSprite absorbingFull = resolve(absorptionFamily, false, false, guiAtlasManager);
-			drawPass(vertexConsumers, absorbingFull, absorbingZ, light, (vertices, passLight, alpha) -> {
+			barDraws.add(new FamilyDraw(absorbingFull, (vertices, passLight, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && !layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingFull, passLight, absorbingZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (hasAbsorption(layout, true)) {
 			ResolvedSprite absorbingHalf = resolve(absorptionFamily, true, false, guiAtlasManager);
-			drawPass(vertexConsumers, absorbingHalf, absorbingZ, light, (vertices, passLight, alpha) -> {
+			barDraws.add(new FamilyDraw(absorbingHalf, (vertices, passLight, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingHalf, passLight, absorbingZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (blinking) {
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, guiAtlasManager);
-			drawPass(vertexConsumers, familyFullBlinking, familyBlinkingZ, light, (vertices, passLight, alpha) -> {
+			barDraws.add(new FamilyDraw(familyFullBlinking, (vertices, passLight, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasBlinkHeart(slot) && !layout.isBlinkHalf(slot)) {
 						emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFullBlinking, passLight, familyBlinkingZ, alpha);
 					}
 				}
-			});
+			}));
 			if (hasBlinkHalf(layout)) {
 				ResolvedSprite familyHalfBlinking = resolve(family, true, true, guiAtlasManager);
-				drawPass(vertexConsumers, familyHalfBlinking, familyBlinkingZ, light, (vertices, passLight, alpha) -> {
+				barDraws.add(new FamilyDraw(familyHalfBlinking, (vertices, passLight, alpha) -> {
 					for (int slot = 0; slot < layout.slots(); slot++) {
 						if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
 							emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalfBlinking, passLight, familyBlinkingZ, alpha);
 						}
 					}
-				});
+				}));
 			}
 		}
 		if (hasHealth(layout, false)) {
 			ResolvedSprite familyFull = resolve(family, false, false, guiAtlasManager);
-			drawPass(vertexConsumers, familyFull, familyZ, light, (vertices, passLight, alpha) -> {
+			barDraws.add(new FamilyDraw(familyFull, (vertices, passLight, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && !layout.isHealthHalf(slot)) {
 						emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFull, passLight, familyZ, alpha);
 					}
 				}
-			});
+			}));
 		}
 		if (hasHealth(layout, true)) {
 			ResolvedSprite familyHalf = resolve(family, true, false, guiAtlasManager);
-			drawPass(vertexConsumers, familyHalf, familyZ, light, (vertices, passLight, alpha) -> {
+			barDraws.add(new FamilyDraw(familyHalf, (vertices, passLight, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot)) {
 						emitHeart(vertices, positionMatrix, layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalf, passLight, familyZ, alpha);
 					}
 				}
-			});
+			}));
 		}
+
+		drawPhases(vertexConsumers, barDraws, passes, light, emissiveLight);
 
 		matrices.pop();
 		if (!reportedFirstHeart) {
@@ -416,26 +419,39 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	/**
-	 * Draws one sprite's geometry as the two vanilla name tag passes: a
-	 * depth-tested one with the nametag's +2 light emission, and — when the
-	 * option is on — a see-through copy without depth test, dimmed to the
-	 * nametag's half-transparent white (0x80FFFFFF) and lit by the plain
-	 * light coords, bit-exact with EntityRenderer.renderLabelIfPresent.
+	 * One sprite family's geometry in HUD painter order, drawn once per
+	 * selected {@link HeartPass} in {@link #drawPhases}.
 	 */
-	private static void drawPass(VertexConsumerProvider vertexConsumers, ResolvedSprite sprite, float z,
-			int light, HeartEmitter renderer) {
-		int emissiveLight = LightmapTextureManager.applyEmission(light, NAMETAG_EMISSION);
-		// Mirrors vanilla nameplates: the normal layer is occluded by walls,
-		// the see-through layer shows dimly through them. All quads of a pass
-		// are emitted before the next buffer is requested, so a shared vertex
-		// builder can never mix the passes up.
-		renderer.emit(vertexConsumers.getBuffer(RenderLayer.getText(sprite.texture())), emissiveLight, 255);
-		if (HeartsPlusConfig.isShowBehindBlocks()) {
-			// Same geometry again without a depth test, so it stays visible
-			// through walls — exactly how vanilla name tags draw their
-			// see-through part. Drawn only when the option is on, so the
-			// default path stays untouched.
-			renderer.emit(vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(sprite.texture())), light, SEE_THROUGH_ALPHA);
+	private record FamilyDraw(ResolvedSprite sprite, HeartEmitter renderer) {
+	}
+
+	/**
+	 * Emits the bar's passes in the vanilla name tag's two phases: every
+	 * dimmed see-through copy first, then every depth-tested bright pass —
+	 * the order EntityRenderer.renderLabelIfPresent itself submits (its
+	 * TextLayerType.SEE_THROUGH draw precedes the bright TextLayerType.NORMAL
+	 * draw). All world-text layers run on the frame Immediate's fallback
+	 * allocator (VertexConsumerProvider.Immediate draws the current layer as
+	 * soon as a different one is requested), and text layers are never
+	 * re-sorted, so the depth-blind see-through layers keep exactly this
+	 * submission order — the HUD's painter order (containers, absorption,
+	 * blinking, health) stays stable frame to frame, which is
+	 * HeartPass.renderOrder's contract realised without a submit-order API.
+	 * The bright passes order themselves by depth: the text pipeline
+	 * depth-tests with LEQUAL and writes depth, so in direct sight the
+	 * closest z layer always wins over anything drawn earlier.
+	 */
+	private static void drawPhases(VertexConsumerProvider vertexConsumers, List<FamilyDraw> barDraws,
+			List<HeartPass> passes, int light, int emissiveLight) {
+		if (passes.contains(HeartPass.SEE_THROUGH)) {
+			for (FamilyDraw draw : barDraws) {
+				draw.renderer().emit(vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(draw.sprite().texture())), light, SEE_THROUGH_ALPHA);
+			}
+		}
+		if (passes.contains(HeartPass.NORMAL)) {
+			for (FamilyDraw draw : barDraws) {
+				draw.renderer().emit(vertexConsumers.getBuffer(RenderLayer.getText(draw.sprite().texture())), emissiveLight, 255);
+			}
 		}
 	}
 
