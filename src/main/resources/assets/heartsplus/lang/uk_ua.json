@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "Індикатори здоров'я увімкнено",
   "heartsplus.message.disabled": "Індикатори здоров'я вимкнено",
   "heartsplus.config.show_invisible": "Показувати невидимих",
+  "heartsplus.config.show_invisible.tooltip": "Може бути заборонено на деяких серверах — перевірте їхні правила. Здоров'я видно лише в невидимих гравців у броні.",
   "heartsplus.config.show_behind_blocks": "Показувати за блоками"
 }

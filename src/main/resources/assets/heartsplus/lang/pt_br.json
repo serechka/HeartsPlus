@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "Indicadores de vida ativados",
   "heartsplus.message.disabled": "Indicadores de vida desativados",
   "heartsplus.config.show_invisible": "Mostrar invisíveis",
+  "heartsplus.config.show_invisible.tooltip": "Pode ser proibido em alguns servidores — verifique as regras. A vida só aparece para jogadores invisíveis com armadura.",
   "heartsplus.config.show_behind_blocks": "Mostrar através dos blocos"
 }

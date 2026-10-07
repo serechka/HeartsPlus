@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "Indicadores de vida activados",
   "heartsplus.message.disabled": "Indicadores de vida desactivados",
   "heartsplus.config.show_invisible": "Mostrar invisibles",
+  "heartsplus.config.show_invisible.tooltip": "Puede estar prohibido en algunos servidores; consulta sus reglas. Solo se muestra la salud de los jugadores invisibles con armadura.",
   "heartsplus.config.show_behind_blocks": "Mostrar a través de bloques"
 }
