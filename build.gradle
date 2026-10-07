@@ -3,8 +3,8 @@ plugins {
 }
 
 // One jar covers the whole 26.x line (built against 26.2, verified on 26.1-26.3).
-// Jar naming: heartsplus-<version>-<mc>-<loader>.jar
-version = "${project.mod_version}-26.x-fabric"
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+26.x-fabric.jar
+version = project.mod_version
 group = project.maven_group
 
 base {
