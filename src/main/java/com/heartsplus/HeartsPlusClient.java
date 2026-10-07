@@ -1,5 +1,6 @@
 package com.heartsplus;
 
+import com.heartsplus.render.BlinkTracker;
 import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -11,6 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -46,7 +48,22 @@ public class HeartsPlusClient {
 		// registered on the right bus.
 		container.getEventBus().register(new KeyMappingListener());
 		container.getEventBus().register(new ResourceReloadListener());
+		NeoForge.EVENT_BUS.register(new DisconnectListener());
 		NeoForge.EVENT_BUS.register(new TickListener());
+	}
+
+	/**
+	 * Per-player state is keyed by UUID and must never outlive the play
+	 * session: a rejoin hands the same UUID a fresh entity whose tick counter
+	 * restarted, and stale blink windows would flash afterwards (the 0.4.7
+	 * flicker). execute() pins the clear onto the render thread, where the
+	 * tracker lives (the disconnect hook can fire on a network thread).
+	 */
+	static final class DisconnectListener {
+		@SubscribeEvent
+		public void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+			Minecraft.getInstance().execute(BlinkTracker::clear);
+		}
 	}
 
 	/** Mod-bus listeners: registration-time events only. */
