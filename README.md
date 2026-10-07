@@ -59,7 +59,7 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
-| Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
+| Height Offset | 10 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
 
