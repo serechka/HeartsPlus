@@ -34,13 +34,11 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 	@Unique
 	private boolean heartsplus$frozen;
 	@Unique
-	private boolean heartsplus$regenerating;
-	@Unique
 	private boolean heartsplus$visibleArmour;
 	@Unique
-	private int heartsplus$animationTick;
+	private int heartsplus$blinkOverlayStart;
 	@Unique
-	private int heartsplus$displayHealth;
+	private int heartsplus$blinkOverlayEnd;
 	@Unique
 	private boolean heartsplus$blinking;
 
@@ -88,26 +86,20 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
-	public boolean heartsplus$isRegenerating() {
-		return this.heartsplus$regenerating;
-	}
-
-	@Override
-	@Unique
 	public boolean heartsplus$hasVisibleArmour() {
 		return this.heartsplus$visibleArmour;
 	}
 
 	@Override
 	@Unique
-	public int heartsplus$getAnimationTick() {
-		return this.heartsplus$animationTick;
+	public int heartsplus$getBlinkOverlayStart() {
+		return this.heartsplus$blinkOverlayStart;
 	}
 
 	@Override
 	@Unique
-	public int heartsplus$getDisplayHealth() {
-		return this.heartsplus$displayHealth;
+	public int heartsplus$getBlinkOverlayEnd() {
+		return this.heartsplus$blinkOverlayEnd;
 	}
 
 	@Override
@@ -119,7 +111,7 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 	@Override
 	@Unique
 	public void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean frozen, boolean regenerating, boolean hasVisibleArmour,
+			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour,
 			int tick, boolean invulnerable) {
 		this.heartsplus$playerUuid = playerId;
 		this.heartsplus$health = health;
@@ -129,11 +121,10 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 		this.heartsplus$poisoned = poisoned;
 		this.heartsplus$withered = withered;
 		this.heartsplus$frozen = frozen;
-		this.heartsplus$regenerating = regenerating;
 		this.heartsplus$visibleArmour = hasVisibleArmour;
-		this.heartsplus$animationTick = tick;
 		BlinkTracker.update(playerId, health, tick, invulnerable);
-		this.heartsplus$displayHealth = BlinkTracker.getDisplayHealth(playerId);
+		this.heartsplus$blinkOverlayStart = BlinkTracker.getBlinkOverlayStart(playerId);
+		this.heartsplus$blinkOverlayEnd = BlinkTracker.getBlinkOverlayEnd(playerId);
 		this.heartsplus$blinking = BlinkTracker.isBlinking(playerId);
 	}
 }
