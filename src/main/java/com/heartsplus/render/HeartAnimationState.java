@@ -1,31 +1,33 @@
 package com.heartsplus.render;
 
 /**
- * Vanilla HUD health-animation state machine for one player, deliberately
- * kept free of Minecraft classes so it is directly unit-testable. Mirrors
- * vanilla InGameHud.renderStatusBars: {@code lastHealthValue}/{@code
- * renderHealthValue} in half-hearts, a millisecond stamp of the last health
- * change and the blink window ({@code heartJumpEndTick}) whose on/off frames
- * come from the tick counter. Damage opens a 20-tick window; healing opens a
- * 10-tick one — that shorter flash is the vanilla recovery pop. The lagging
- * {@code displayHealth} copy snaps to the current health only after a full
- * second without changes, which is what keeps the lost hearts blinking in
- * place and sizes the containers while they do.
+ * Vanilla HUD blink-window state machine for one player, deliberately kept
+ * free of Minecraft classes so it is directly unit-testable. Mirrors the
+ * window logic of vanilla InGameHud.renderStatusBars: a blink end tick whose
+ * on/off frames come from the tick counter via the square wave
+ * {@code (blinkEnd - tick) / 3 % 2 == 1}. Damage opens a 20-tick window;
+ * healing opens a 10-tick one. Since 0.4.7 the bar value itself is instant
+ * (the vanilla lagging {@code displayHealth} copy and its 1000 ms catch-up
+ * are dropped by owner spec), so the window drives only the flash overlays:
+ * the half-heart interval changed by the armed change is remembered, and on
+ * damage the vanilla blinking sprites are drawn on the lost slots. On
+ * acquired slots vanilla draws no blinking heart at all (InGameHud.renderHealthBar
+ * draws the blinking container variant plus the normal heart there), so a
+ * heal window only flashes the containers.
  */
 public final class HeartAnimationState {
 	/** Vanilla blink window after damage, in game ticks. */
 	private static final int DAMAGE_BLINK_TICKS = 20;
 	/** Vanilla blink window after healing (the recovery pop), in game ticks. */
 	private static final int HEAL_BLINK_TICKS = 10;
-	/** Vanilla lag before displayHealth snaps to the current health. */
-	private static final long DISPLAY_CATCHUP_MILLIS = 1000L;
 	/** Vanilla blink cadence: on for this many ticks, off for as long. */
 	private static final long BLINK_PHASE_TICKS = 3L;
 
 	private int lastHealth;
-	private int displayHealth;
-	private long lastHealthTime;
 	private int blinkEndTick;
+	/** Half-heart interval [start, end) carrying the blinking overlay; empty for heal windows. */
+	private int blinkOverlayStart;
+	private int blinkOverlayEnd;
 	/** The animation must advance once per game tick, but extraction runs every frame. */
 	private int lastSeenTick = Integer.MIN_VALUE;
 	private boolean blinking;
@@ -34,24 +36,32 @@ public final class HeartAnimationState {
 	 * Advances the state to {@code tick}. Statement order mirrors vanilla:
 	 * the blink phase is sampled from the window as it was before this tick's
 	 * change is folded in, and only an {@code invulnerable} change counts —
-	 * the same gate the vanilla HUD applies against noisy health drift.
+	 * the same gate the vanilla HUD applies against noisy health drift. With
+	 * the animation off no window is armed, but {@code lastHealth} still
+	 * tracks, so re-enabling cannot flash a change that happened meanwhile.
 	 */
-	public void tick(int currentHealth, int tick, long nowMillis, boolean invulnerable) {
+	public void tick(int currentHealth, int tick, boolean invulnerable, boolean animationEnabled) {
 		if (tick == this.lastSeenTick) {
 			return;
 		}
 		this.lastSeenTick = tick;
-		this.blinking = this.blinkEndTick > tick && (this.blinkEndTick - tick) / BLINK_PHASE_TICKS % 2L == 1L;
-		if (currentHealth < this.lastHealth && invulnerable) {
-			this.lastHealthTime = nowMillis;
-			this.blinkEndTick = tick + DAMAGE_BLINK_TICKS;
-		} else if (currentHealth > this.lastHealth && invulnerable) {
-			this.lastHealthTime = nowMillis;
-			this.blinkEndTick = tick + HEAL_BLINK_TICKS;
-		}
-		if (nowMillis - this.lastHealthTime > DISPLAY_CATCHUP_MILLIS) {
-			this.displayHealth = currentHealth;
-			this.lastHealthTime = nowMillis;
+		this.blinking = animationEnabled && this.blinkEndTick > tick
+				&& (this.blinkEndTick - tick) / BLINK_PHASE_TICKS % 2L == 1L;
+		if (animationEnabled && invulnerable && currentHealth != this.lastHealth) {
+			// A change while a window is live re-arms it from the latest value.
+			if (currentHealth < this.lastHealth) {
+				this.blinkOverlayStart = currentHealth;
+				this.blinkOverlayEnd = this.lastHealth;
+				this.blinkEndTick = tick + DAMAGE_BLINK_TICKS;
+			} else {
+				// A heal window flashes only the containers: vanilla draws no
+				// blinking heart on acquired slots (InGameHud.renderHealthBar
+				// draws the blinking container variant plus the normal heart
+				// there).
+				this.blinkOverlayStart = 0;
+				this.blinkOverlayEnd = 0;
+				this.blinkEndTick = tick + HEAL_BLINK_TICKS;
+			}
 		}
 		this.lastHealth = currentHealth;
 	}
@@ -61,8 +71,13 @@ public final class HeartAnimationState {
 		return this.blinking;
 	}
 
-	/** The lagging health copy that the blink overlay and container count follow. */
-	public int displayHealth() {
-		return this.displayHealth;
+	/** First half-heart index carrying a blinking overlay sprite (inclusive). */
+	public int blinkOverlayStart() {
+		return this.blinkOverlayStart;
+	}
+
+	/** Half-heart index after the last blinking overlay sprite (exclusive). */
+	public int blinkOverlayEnd() {
+		return this.blinkOverlayEnd;
 	}
 }

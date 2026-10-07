@@ -33,7 +33,6 @@ import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.random.Random;
 import org.joml.Matrix4fc;
 import org.slf4j.Logger;
 
@@ -83,20 +82,20 @@ public final class HeartsAboveHeadRenderer {
 	private static int suppressedFailures;
 
 	/**
-	 * Fixed height above the entity origin where the heart bar sits:
-	 * 0.4.3 ideal +2px (2 GUI px × 0.025). Deliberately not derived from
+	 * Fixed height above the entity origin where the heart bar sits. Since
+	 * 0.4.7 it includes the old default 10px lift (10 GUI px × 0.025), so the
+	 * Height Offset setting reads 0 exactly at the owner-tuned height and
+	 * tunes up and down symmetrically. Deliberately not derived from
 	 * nameLabelPos/height: the nameplate position sags in the sneak pose
 	 * with interpolation lag, which made the hearts jump.
 	 */
-	private static final float HEART_ANCHOR_HEIGHT = 2.10F;
+	private static final float HEART_ANCHOR_HEIGHT = 2.35F;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	private static final Identifier GUI_ATLAS = Identifier.ofVanilla("textures/atlas/gui.png");
 	/** Vanilla name tag text is drawn with this much extra light emission (LabelCommandRenderer). */
 	private static final int NAMETAG_EMISSION = 2;
 	/** Alpha of the nametag's see-through copy: vanilla colour 0x80FFFFFF — half-transparent white. */
 	private static final int SEE_THROUGH_ALPHA = 0x80;
-	/** Vanilla shakes the bar from a generator seeded per tick with this exact product (InGameHud.renderStatusBars). */
-	private static final int SHAKE_SEED_MULTIPLIER = 312871;
 
 	private HeartsAboveHeadRenderer() {
 	}
@@ -184,16 +183,14 @@ public final class HeartsAboveHeadRenderer {
 			return;
 		}
 
-		// With the animation off the bar is static: no blink windows and no
-		// displayHealth lag, so the blink passes are skipped entirely and their
-		// blinking sprites are never resolved (the resolve calls sit inside the
-		// `blinking` gate).
-		boolean animation = HeartsPlusConfig.isBlinkAnimationEnabled();
-		int animationTick = health.heartsplus$getAnimationTick();
-		int displayHealth = animation ? health.heartsplus$getDisplayHealth() : (int) Math.ceil(health.heartsplus$getHealth());
-		boolean blinking = animation && health.heartsplus$isBlinking();
+		// The bar always shows the current health instantly (no vanilla
+		// displayHealth lag); the blink window from the animation state only
+		// adds the flash overlays. With the animation off the state arms no
+		// windows, so `blinking` stays false and the blinking sprites are
+		// never resolved (the resolve calls sit inside the `blinking` gate).
+		boolean blinking = health.heartsplus$isBlinking();
 		HeartBarLayout layout = HeartBarLayout.of(health.heartsplus$getHealth(), health.heartsplus$getMaxHealth(),
-				health.heartsplus$getAbsorption(), displayHealth);
+				health.heartsplus$getAbsorption());
 		if (layout.slots() <= 0) {
 			// Degenerate health values — nothing to draw, skip all geometry work.
 			return;
@@ -203,8 +200,15 @@ public final class HeartsAboveHeadRenderer {
 				health.heartsplus$isFrozen());
 		// Withered players keep their black absorption hearts, exactly like the vanilla HUD.
 		HeartType absorptionFamily = family == HeartType.WITHERED ? HeartType.WITHERED : HeartType.ABSORBING;
-		int[] shake = shakeOffsets(layout, animationTick, animation);
-		int bounceSlot = layout.regenBounceSlot(animationTick, animation && health.heartsplus$isRegenerating());
+		// Lost-slot overlay of the damage window, in half-hearts; slot bounds
+		// are resolved once per player per frame below. Vanilla also swaps the
+		// container sprite to its blinking variant on every slot while any
+		// window is live (InGameHud.renderHealthBar draws the container with
+		// the blink flag) — the container pass does that via `blinking`, and
+		// that flash is the whole heal pop, since acquired slots get no
+		// blinking heart.
+		int overlayFrom = health.heartsplus$getBlinkOverlayStart();
+		int overlayTo = health.heartsplus$getBlinkOverlayEnd();
 
 		matrices.push();
 		matrices.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
@@ -233,7 +237,7 @@ public final class HeartsAboveHeadRenderer {
 		ResolvedSprite container = resolve(HeartType.CONTAINER, false, blinking, atlasManager);
 		submitPass(queue, passes, matrices, container, 0, containerZ, light, (entry, vertices, l, alpha) -> {
 			for (int slot = 0; slot < layout.slots(); slot++) {
-				emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), container, l, containerZ, alpha);
+				emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), container, l, containerZ, alpha);
 			}
 		});
 		if (hasAbsorption(layout, false)) {
@@ -241,7 +245,7 @@ public final class HeartsAboveHeadRenderer {
 			submitPass(queue, passes, matrices, absorbingFull, 1, absorbingZ, light, (entry, vertices, l, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && !layout.isAbsorptionHalf(slot)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingFull, l, absorbingZ, alpha);
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), absorbingFull, l, absorbingZ, alpha);
 					}
 				}
 			});
@@ -251,29 +255,34 @@ public final class HeartsAboveHeadRenderer {
 			submitPass(queue, passes, matrices, absorbingHalf, 1, absorbingZ, light, (entry, vertices, l, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), absorbingHalf, l, absorbingZ, alpha);
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), absorbingHalf, l, absorbingZ, alpha);
 					}
 				}
 			});
 		}
-		if (blinking) {
+		if (blinking && overlayFrom < overlayTo) {
+			// The damage flash: vanilla draws the blinking sprites while the
+			// window's square wave is on (InGameHud.renderHealthBar: `blink &&
+			// halves < oldHealth`), visible only where no normal heart covers
+			// them — the lost slots this interval enumerates. The half variant
+			// only ever lands on the range's top slot (`halves + 1 == oldHealth`).
+			int overlayFirstSlot = overlayFrom / 2;
+			int overlayLastSlot = Math.min((overlayTo - 1) / 2, layout.slots() - 1);
+			int overlayHalfSlot = overlayTo % 2 == 1 ? overlayLastSlot : -1;
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, atlasManager);
 			submitPass(queue, passes, matrices, familyFullBlinking, 2, familyBlinkingZ, light, (entry, vertices, l, alpha) -> {
-				for (int slot = 0; slot < layout.slots(); slot++) {
-					if (layout.hasBlinkHeart(slot) && !layout.isBlinkHalf(slot)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFullBlinking, l, familyBlinkingZ, alpha);
+				for (int slot = overlayFirstSlot; slot <= overlayLastSlot; slot++) {
+					if (slot != overlayHalfSlot) {
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyFullBlinking, l, familyBlinkingZ, alpha);
 					}
 				}
 			});
-			if (hasBlinkHalf(layout)) {
+			if (overlayHalfSlot >= 0) {
 				ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
-				submitPass(queue, passes, matrices, familyHalfBlinking, 2, familyBlinkingZ, light, (entry, vertices, l, alpha) -> {
-					for (int slot = 0; slot < layout.slots(); slot++) {
-						if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
-							emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalfBlinking, l, familyBlinkingZ, alpha);
-						}
-					}
-				});
+				submitPass(queue, passes, matrices, familyHalfBlinking, 2, familyBlinkingZ, light,
+						(entry, vertices, l, alpha) -> emitHeart(vertices, entry.getPositionMatrix(),
+								layout.x(overlayHalfSlot), layout.yTop(overlayHalfSlot), familyHalfBlinking, l,
+								familyBlinkingZ, alpha));
 			}
 		}
 		if (hasHealth(layout, false)) {
@@ -281,7 +290,7 @@ public final class HeartsAboveHeadRenderer {
 			submitPass(queue, passes, matrices, familyFull, 3, familyZ, light, (entry, vertices, l, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && !layout.isHealthHalf(slot)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyFull, l, familyZ, alpha);
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyFull, l, familyZ, alpha);
 					}
 				}
 			});
@@ -291,7 +300,7 @@ public final class HeartsAboveHeadRenderer {
 			submitPass(queue, passes, matrices, familyHalf, 3, familyZ, light, (entry, vertices, l, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot)) {
-						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), slotY(layout, slot, shake, bounceSlot), familyHalf, l, familyZ, alpha);
+						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyHalf, l, familyZ, alpha);
 					}
 				}
 			});
@@ -323,44 +332,6 @@ public final class HeartsAboveHeadRenderer {
 			}
 		}
 		return false;
-	}
-
-	/** True while a half-heart blink overlay should be drawn (only the top displayHealth heart can be half). */
-	private static boolean hasBlinkHalf(HeartBarLayout layout) {
-		for (int slot = 0; slot < layout.slots(); slot++) {
-			if (layout.hasBlinkHeart(slot) && layout.isBlinkHalf(slot)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/** Top GUI pixel of a slot's sprites, with the low-health shake and the Regeneration bounce applied. */
-	private static float slotY(HeartBarLayout layout, int slot, int[] shake, int bounceSlot) {
-		float y = layout.yTop(slot) + shake[slot];
-		if (slot == bounceSlot) {
-			y -= 2.0F;
-		}
-		return y;
-	}
-
-	/**
-	 * Vanilla's per-tick low-health jitter: while the bar holds two hearts or
-	 * less, every heart is offset by a random extra pixel. The generator is
-	 * seeded per tick — with the same integer product as vanilla — and
-	 * consumed from the top slot down exactly like InGameHud.renderHealthBar.
-	 * A static bar (animation off) skips the jitter entirely.
-	 */
-	private static int[] shakeOffsets(HeartBarLayout layout, int tick, boolean animation) {
-		int[] shake = new int[layout.slots()];
-		if (animation && layout.shakes()) {
-			Random random = Random.create();
-			random.setSeed(tick * (long) SHAKE_SEED_MULTIPLIER);
-			for (int slot = layout.slots() - 1; slot >= 0; slot--) {
-				shake[slot] = random.nextInt(2);
-			}
-		}
-		return shake;
 	}
 
 	private static void skipOnce(String reason) {
