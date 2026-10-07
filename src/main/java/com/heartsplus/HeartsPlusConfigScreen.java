@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -37,7 +38,8 @@ public class HeartsPlusConfigScreen extends Screen {
 
 		addToggle(left, y, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
-		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
+		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(),
+				HeartsPlusConfig::setShowInvisiblePlayers, "heartsplus.config.show_invisible.tooltip");
 		addToggle(right, y + ROW_STEP, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 		addRenderableWidget(CycleButton.builder(
 						(Boolean value) -> value
@@ -83,8 +85,16 @@ public class HeartsPlusConfigScreen extends Screen {
 	}
 
 	private void addToggle(int x, int y, String key, boolean initial, Consumer<Boolean> setter) {
-		addRenderableWidget(CycleButton.onOffBuilder(initial)
-				.create(x, y, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable(key), (button, value) -> setter.accept(value)));
+		addToggle(x, y, key, initial, setter, null);
+	}
+
+	private void addToggle(int x, int y, String key, boolean initial, Consumer<Boolean> setter, String tooltipKey) {
+		CycleButton<Boolean> button = CycleButton.onOffBuilder(initial)
+				.create(x, y, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable(key), (btn, value) -> setter.accept(value));
+		if (tooltipKey != null) {
+			button.setTooltip(Tooltip.create(Component.translatable(tooltipKey)));
+		}
+		addRenderableWidget(button);
 	}
 
 	private static AbstractSliderButton slider(int x, int y, double min, double max, double initial,

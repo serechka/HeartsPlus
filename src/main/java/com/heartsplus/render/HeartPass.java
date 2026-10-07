@@ -4,17 +4,18 @@ import java.util.List;
 
 /**
  * The two vanilla name tag passes a heart bar is submitted with, the
- * (sneaking, showBehindBlocks) rule that picks between them, and the submit
- * order that keeps their blending deterministic. Deliberately holds no
- * Minecraft classes so it is directly unit-testable.
+ * (sneaking, invisible, showBehindBlocks) rule that picks between them, and
+ * the submit order that keeps their blending deterministic. Deliberately
+ * holds no Minecraft classes so it is directly unit-testable.
  *
  * <p>The pass set mirrors EntityRenderer.submitNameTag: it passes
  * {@code !isDiscrete} as the name tag's seeThrough flag, and
  * SubmitNodeCollection.submitNameTag draws the flag's else branch — a
  * sneaking player's name — as the single depth-tested NORMAL pass. The
- * see-through copy is only ever added for players who are not sneaking: the
- * sneak rule is stronger than the showBehindBlocks toggle (owner decision,
- * 0.4.5).</p>
+ * see-through copy is only ever added for players who are neither sneaking
+ * nor invisible: both rules are stronger than the showBehindBlocks toggle
+ * (owner decisions, 0.4.5 and 0.4.8 — the see-through copy would betray an
+ * invisible player's position through walls).</p>
  */
 public enum HeartPass {
 	/** Depth-tested bright pass (vanilla text render type, nametag +2 emission). */
@@ -39,9 +40,14 @@ public enum HeartPass {
 		return this == NORMAL ? SEE_THROUGH_LAYER_COUNT : seeThroughLayerIndex;
 	}
 
-	/** Pass set for a (sneaking, showBehindBlocks) pair — the vanilla name tag rule. */
-	public static List<HeartPass> passesFor(boolean sneaking, boolean showBehindBlocks) {
-		if (sneaking) {
+	/**
+	 * Pass set for a (sneaking, invisible, showBehindBlocks) triple — the
+	 * vanilla name tag rule plus the invisible one: an invisible player is
+	 * drawn with the single depth-tested pass like a sneaking one, so their
+	 * hearts hide behind walls no matter what the toggle says.
+	 */
+	public static List<HeartPass> passesFor(boolean sneaking, boolean invisible, boolean showBehindBlocks) {
+		if (sneaking || invisible) {
 			return List.of(NORMAL);
 		}
 		return showBehindBlocks ? List.of(NORMAL, SEE_THROUGH) : List.of(NORMAL);

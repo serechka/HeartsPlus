@@ -11,7 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the bar value is instant, so the window only drives the flash overlays —
  * the square-wave frames, the damage overlay over the lost slots, and the
  * once-per-tick guard. Healing opens the short pop window with no heart
- * overlay (vanilla flashes only the containers on acquired slots).
+ * overlay (vanilla flashes only the containers on acquired slots). Since
+ * 0.4.8 a backwards tick (recreated entity under the same UUID) resets the
+ * state instead of letting the stale window thrash.
  */
 class HeartAnimationStateTest {
 
@@ -127,11 +129,13 @@ class HeartAnimationStateTest {
 
 		assertEquals(2, state.blinkOverlayStart());
 		assertEquals(6, state.blinkOverlayEnd());
-		// The re-armed window ends at 123: off-frame at 122, on-phase at 120.
+		// The re-armed window ends at 123: on-phase where (123 - tick) / 3 is
+		// odd. Sampled forward only — a backwards tick now means a recreated
+		// entity and resets the state, so the old rewind-to-120 probe is gone.
+		state.tick(2, 106, false, true);
+		assertTrue(state.isBlinking()); // (123 - 106) / 3 == 5, odd → on
 		state.tick(2, 122, false, true);
 		assertFalse(state.isBlinking()); // (123 - 122) / 3 == 0, even → off
-		state.tick(2, 120, false, true);
-		assertTrue(state.isBlinking()); // (123 - 120) / 3 == 1, odd → on
 	}
 
 	@Test
@@ -174,5 +178,52 @@ class HeartAnimationStateTest {
 		state.tick(2, 106, true, true);
 		assertEquals(2, state.blinkOverlayStart());
 		assertEquals(6, state.blinkOverlayEnd());
+	}
+
+	@Test
+	void aBackwardTickResetsTheStateAndArmsNothing() {
+		HeartAnimationState state = atFullHealth(1000);
+		state.tick(6, 1001, true, true); // window [6, 20), ends at tick 1021
+
+		// The entity behind the UUID is recreated (world/server switch, chunk
+		// reload): the tick counter restarts from ~0 while the old window is
+		// still armed, and spawn protection can report invulnerable with a
+		// health jump 6 -> 20. The reset must swallow that call entirely.
+		assertTrue(state.tick(20, 5, true, true));
+		assertFalse(state.isBlinking());
+		assertEquals(0, state.blinkOverlayStart());
+		assertEquals(0, state.blinkOverlayEnd());
+
+		// The stale window must never flash again: its square wave over the
+		// restarted counter is exactly the reported white flicker.
+		state.tick(20, 104, false, true);
+		assertFalse(state.isBlinking());
+		assertEquals(0, state.blinkOverlayStart());
+		assertEquals(0, state.blinkOverlayEnd());
+	}
+
+	@Test
+	void afterTheResetNewChangesArmNormally() {
+		HeartAnimationState state = atFullHealth(1000);
+		state.tick(20, 1001, false, true);
+		assertTrue(state.tick(20, 3, false, true)); // backward tick re-baselines lastHealth to 20
+
+		// Damage right after the reset arms a fresh window from the new counter.
+		state.tick(6, 4, true, true);
+		assertEquals(6, state.blinkOverlayStart());
+		assertEquals(20, state.blinkOverlayEnd());
+		state.tick(6, 7, false, true);
+		assertTrue(state.isBlinking()); // (24 - 7) / 3 == 5, odd → on
+	}
+
+	@Test
+	void theSameTickRightAfterTheResetIsStillSwallowed() {
+		HeartAnimationState state = atFullHealth(1000);
+		assertTrue(state.tick(20, 3, false, true));
+		// Extraction repeats within the restarted tick: nothing may arm.
+		assertFalse(state.tick(2, 3, true, true));
+		assertFalse(state.isBlinking());
+		assertEquals(0, state.blinkOverlayStart());
+		assertEquals(0, state.blinkOverlayEnd());
 	}
 }

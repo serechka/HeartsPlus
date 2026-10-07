@@ -6,8 +6,10 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,8 +32,23 @@ public abstract class EntityRendererMixin {
 					player.getAbsorptionAmount(), isLocalPlayer,
 					player.hasEffect(MobEffects.POISON), player.hasEffect(MobEffects.WITHER),
 					player.isFullyFrozen(), hasVisibleArmour(player),
-					player.tickCount, player.invulnerableTime > 0);
+					player.tickCount, player.invulnerableTime > 0,
+					nameTagAttachmentY(player, partialTicks));
 		}
+	}
+
+	/**
+	 * The Y of the vanilla name tag attachment point, computed with the same
+	 * call EntityRenderer.extractRenderState makes for its own
+	 * {@code nameTagAttachment} — that state field is only filled while the
+	 * name is actually shown, which for players is essentially never, so the
+	 * bar reads the attachment off the entity instead. The point follows the
+	 * pose (standing 1.8, crouching 1.5, swimming 0.6) because
+	 * {@code getAttachments} serves the current pose dimensions.
+	 */
+	private static float nameTagAttachmentY(Player player, float partialTicks) {
+		Vec3 attachment = player.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, player.getYRot(partialTicks));
+		return attachment == null ? player.getBbHeight() : (float) attachment.y;
 	}
 
 	private static boolean hasVisibleArmour(Player player) {
