@@ -5,7 +5,8 @@ plugins {
 // NeoForge build of HeartsPlus for the legacy Minecraft 1.21.x line
 // (1.21.9, Mojang mappings; jar runs on 1.21.9-1.21.10). Rendering hooks are
 // identical to the Fabric branch; only the bootstrap and packaging are NeoForge.
-version = "${project.mod_version}-1.21.9-neoforge"
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+1.21.9-neoforge.jar
+version = project.mod_version
 group = project.maven_group
 
 base {

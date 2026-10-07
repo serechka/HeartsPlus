@@ -1,9 +1,9 @@
 package com.heartsplus.render;
 
+import com.heartsplus.HeartsPlusConfig;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
-import net.minecraft.Util;
 import net.minecraft.util.Mth;
 
 /**
@@ -24,17 +24,25 @@ public final class BlinkTracker {
 	 * Feeds the current health of a player into the vanilla animation model.
 	 * The per-tick guard inside {@link HeartAnimationState} keeps the repeated
 	 * per-frame extract calls from advancing the animation more than once per
-	 * game tick — the cadence the vanilla HUD ticks with.
+	 * game tick — the cadence the vanilla HUD ticks with. With the animation
+	 * toggle off the state still tracks the health (so re-enabling cannot
+	 * flash a change that happened meanwhile) but arms no windows.
 	 */
 	public static void update(UUID playerId, float health, int tick, boolean invulnerable) {
 		animationStates.computeIfAbsent(playerId, id -> new HeartAnimationState())
-				.tick(Mth.ceil(health), tick, Util.getMillis(), invulnerable);
+				.tick(Mth.ceil(health), tick, invulnerable, HeartsPlusConfig.isBlinkAnimationEnabled());
 	}
 
-	/** The lagging vanilla displayHealth copy in half-hearts; 0 before the first snap. */
-	public static int getDisplayHealth(UUID playerId) {
+	/** First half-heart index carrying a blinking overlay sprite (inclusive); 0 when the overlay is empty. */
+	public static int getBlinkOverlayStart(UUID playerId) {
 		HeartAnimationState state = animationStates.get(playerId);
-		return state == null ? 0 : state.displayHealth();
+		return state == null ? 0 : state.blinkOverlayStart();
+	}
+
+	/** Half-heart index after the last blinking overlay sprite (exclusive). */
+	public static int getBlinkOverlayEnd(UUID playerId) {
+		HeartAnimationState state = animationStates.get(playerId);
+		return state == null ? 0 : state.blinkOverlayEnd();
 	}
 
 	/** True on the on-frames of the vanilla blink flash for the current tick. */
