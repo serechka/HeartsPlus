@@ -193,7 +193,7 @@ public final class HeartsAboveHeadRenderer {
 			skipOnce("player beyond the render distance");
 			return;
 		}
-		if (state.isInvisible
+		if (state.isInvisibleToPlayer
 				&& !(HeartsPlusConfig.isShowInvisiblePlayers() && health.heartsplus$hasVisibleArmour())) {
 			// Hidden by default; even when enabled, armour is the only thing
 			// that betrays an invisible player.
