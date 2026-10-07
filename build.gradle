@@ -2,8 +2,9 @@ plugins {
 	id 'net.neoforged.moddev' version "${moddev_version}"
 }
 
-// NeoForge build of HeartsPlus for Minecraft 26.x.
-version = "${project.mod_version}-26.x-neoforge"
+// NeoForge build of HeartsPlus for Minecraft 26.x. mod_version carries the
+// full semver incl. build metadata: heartsplus-0.4.7+26.x-neoforge.jar
+version = project.mod_version
 group = project.maven_group
 
 base {
