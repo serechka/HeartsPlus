@@ -6,6 +6,7 @@ import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CyclingButtonWidget;
 import net.minecraft.client.gui.widget.SliderWidget;
@@ -37,7 +38,8 @@ public class HeartsPlusConfigScreen extends Screen {
 
 		addToggle(left, y, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
-		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig::setShowInvisiblePlayers);
+		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(),
+				HeartsPlusConfig::setShowInvisiblePlayers, "heartsplus.config.show_invisible.tooltip");
 		addToggle(right, y + ROW_STEP, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
 		addDrawableChild(CyclingButtonWidget.onOffBuilder(
 					Text.translatable("option.heartsplus.textures.vanilla"),
@@ -82,8 +84,16 @@ public class HeartsPlusConfigScreen extends Screen {
 	}
 
 	private void addToggle(int x, int y, String key, boolean initial, Consumer<Boolean> setter) {
-		addDrawableChild(CyclingButtonWidget.onOffBuilder(initial)
-				.build(x, y, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable(key), (button, value) -> setter.accept(value)));
+		addToggle(x, y, key, initial, setter, null);
+	}
+
+	private void addToggle(int x, int y, String key, boolean initial, Consumer<Boolean> setter, String tooltipKey) {
+		CyclingButtonWidget<Boolean> button = CyclingButtonWidget.onOffBuilder(initial)
+				.build(x, y, WIDGET_WIDTH, WIDGET_HEIGHT, Text.translatable(key), (btn, value) -> setter.accept(value));
+		if (tooltipKey != null) {
+			button.setTooltip(Tooltip.of(Text.translatable(tooltipKey)));
+		}
+		addDrawableChild(button);
 	}
 
 	private static SliderWidget slider(int x, int y, double min, double max, double initial,
