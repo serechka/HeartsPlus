@@ -23,7 +23,7 @@ server, no setup, and know your ally's HP before the fight starts.
 
 - **True vanilla look** — the exact hearts from the game's own assets: containers, halves, absorption, poisoned, withered and frozen
 - **Damage flash and healing pop** — hearts blink and recover exactly like your own HUD, frame for frame
-- **Through walls** — hearts dim behind blocks just like name tags; sneaking players hide their hearts, just like vanilla
+- **Through walls** — hearts dim behind blocks just like name tags; a sneaking player keeps only the depth-tested pass, exactly like a vanilla name tag on sneak (bright in the open, hidden behind blocks)
 - **Smart stacking** — long health bars wrap into rows of 10 and grow upward, never covering nametags
 - **Yours to tune** — scale, height, render distance, texture source, animation toggle; everything changes in-game and applies instantly
 - **11 languages** — English, Русский, Українська, 中文, Español, Português (BR), Deutsch, Français, 日本語, 한국어, Italiano
@@ -78,7 +78,7 @@ Open **Mod Menu → HeartsPlus → Settings** on Fabric, or press **H** anywhere
 | Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 128 | Maximum distance in blocks, 8 – 128 |
-| Height Offset | 0 | Fine-tune the height above the head, −20 – +40 |
+| Height Offset | 10 | Fine-tune the height above the head, −20 – +40 |
 
 Settings persist to `config/heartsplus.json` and apply instantly.
 
