@@ -34,6 +34,10 @@ public interface HealthHolder {
 	/** True on the on-frames of the vanilla blink flash for the current tick. */
 	boolean heartsplus$isBlinking();
 
+	/** Height above the entity origin where the bar draws: the smoothed name tag attachment anchor. */
+	float heartsplus$getHeartAnchorY();
+
 	void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
-			boolean poisoned, boolean withered, boolean hasVisibleArmour, int tick, boolean invulnerable);
+			boolean poisoned, boolean withered, boolean hasVisibleArmour, int tick, boolean invulnerable,
+			float attachmentY);
 }

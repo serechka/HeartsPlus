@@ -1,5 +1,6 @@
 package com.heartsplus;
 
+import com.heartsplus.render.BlinkTracker;
 import com.heartsplus.render.HeartsAboveHeadRenderer;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -68,8 +70,18 @@ public class HeartsPlusClient {
 		}
 	}
 
-	/** Game-bus listeners: per-tick events. */
+	/** Game-bus listeners: per-tick events and the play-connection lifecycle. */
 	static final class TickListener {
+		@SubscribeEvent
+		public void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+			// Per-player state is keyed by UUID and must never outlive the play
+			// session: a rejoin hands the same UUID a fresh entity whose tick
+			// counter restarted, and stale blink windows would flash afterwards.
+			// execute() pins the clear onto the render thread, where the tracker
+			// lives (the disconnect hook can fire on a network thread).
+			Minecraft.getInstance().execute(BlinkTracker::clear);
+		}
+
 		@SubscribeEvent
 		public void onClientTick(ClientTickEvent.Post event) {
 			Minecraft client = Minecraft.getInstance();

@@ -3,7 +3,7 @@ plugins {
 }
 
 // NeoForge build of HeartsPlus for Minecraft 26.x. mod_version carries the
-// full semver incl. build metadata: heartsplus-0.4.7+26.x-neoforge.jar
+// full semver incl. build metadata: heartsplus-0.4.8+26.x-neoforge.jar
 version = project.mod_version
 group = project.maven_group
 
