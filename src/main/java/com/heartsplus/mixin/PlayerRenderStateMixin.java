@@ -40,6 +40,8 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 	private int heartsplus$blinkOverlayEnd;
 	@Unique
 	private boolean heartsplus$blinking;
+	@Unique
+	private float heartsplus$heartAnchorY;
 
 	@Override
 	@Unique
@@ -109,9 +111,15 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 
 	@Override
 	@Unique
+	public float heartsplus$getHeartAnchorY() {
+		return this.heartsplus$heartAnchorY;
+	}
+
+	@Override
+	@Unique
 	public void heartsplus$update(UUID playerId, float health, float maxHealth, float absorption, boolean localPlayer,
 			boolean poisoned, boolean withered, boolean frozen, boolean hasVisibleArmour,
-			int tick, boolean invulnerable) {
+			int tick, boolean invulnerable, float attachmentY) {
 		this.heartsplus$playerUuid = playerId;
 		this.heartsplus$health = health;
 		this.heartsplus$maxHealth = maxHealth;
@@ -121,7 +129,7 @@ public abstract class PlayerRenderStateMixin implements HealthHolder {
 		this.heartsplus$withered = withered;
 		this.heartsplus$frozen = frozen;
 		this.heartsplus$visibleArmour = hasVisibleArmour;
-		BlinkTracker.update(playerId, health, tick, invulnerable);
+		this.heartsplus$heartAnchorY = BlinkTracker.update(playerId, health, tick, invulnerable, attachmentY);
 		this.heartsplus$blinkOverlayStart = BlinkTracker.getBlinkOverlayStart(playerId);
 		this.heartsplus$blinkOverlayEnd = BlinkTracker.getBlinkOverlayEnd(playerId);
 		this.heartsplus$blinking = BlinkTracker.isBlinking(playerId);
