@@ -24,12 +24,14 @@ import net.minecraft.client.texture.Sprite;
 import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.EntityAttachmentType;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
@@ -44,7 +46,8 @@ import org.slf4j.Logger;
  * camera, scale(0.025 * scale, -0.025 * scale, 0.025 * scale). Hearts are
  * drawn with the world-text render layers, which — like name tags — are
  * shaded only by the lightmap, so they look identical from every viewing
- * angle. The anchor height is a fixed constant so the bar never jumps with
+ * angle. The anchor rides the vanilla name tag attachment point, smoothed
+ * per player, so the bar sits right above the tag and glides with it through
  * pose changes. Sprites, pass structure and the animation all mirror the
  * vanilla HUD (InGameHud.renderHealthBar): containers deepest, then
  * absorption, then the blink overlay, with the health hearts on top — the
@@ -82,19 +85,60 @@ public final class HeartsAboveHeadRenderer {
 	private static int suppressedFailures;
 
 	/**
-	 * Fixed height above the entity origin where the heart bar sits. Since
-	 * 0.4.7 it includes the old default 10px lift (10 GUI px × 0.025), so the
-	 * Height Offset setting reads 0 exactly at the owner-tuned height and
-	 * tunes up and down symmetrically. Deliberately not derived from the
-	 * name tag attachment: the nameplate position sags in the sneak pose with
-	 * interpolation lag, which made the hearts jump.
+	 * Height above the entity origin where the heart bar sits for a standing
+	 * player — the owner-tuned 0.4.7 anchor, which includes the old default
+	 * 10px lift (10 GUI px × 0.025), so the Height Offset setting reads 0
+	 * exactly at that height and tunes up and down symmetrically. Since 0.4.8
+	 * it is the fallback and the gap calibration point: the live anchor rides
+	 * the vanilla name tag attachment point via {@link #heartAnchorForAttachment}.
 	 */
 	private static final float HEART_ANCHOR_HEIGHT = 2.35F;
+	/**
+	 * Name tag attachment height of a standing player. The player type
+	 * declares no explicit NAME_TAG attachment, so {@code getPointNullable}
+	 * returns null and the bar reads the bounding box height instead —
+	 * {@code PlayerEntity.STANDING_DIMENSIONS = EntityDimensions.changing(0.6F, 1.8F)}
+	 * — i.e. 1.8. The pose-specific dimensions (crouching 1.5, swimming/
+	 * fall-flying 0.6) lower the same fallback, which is what the bar now
+	 * glides along.
+	 */
+	private static final float STANDING_ATTACHMENT_Y = 1.8F;
+	/**
+	 * Vanilla lifts the name tag text half a block above the attachment point
+	 * (EntityRenderer.renderLabelIfPresent: {@code translate(..., y + 0.5, ...)}),
+	 * so 2.3 is the tag's top edge for a standing player. The owner-tuned
+	 * anchor 2.35 floats exactly {@code 2.35 − (1.8 + 0.5) = 0.05} above it.
+	 */
+	private static final float NAMETAG_TEXT_LIFT = 0.5F;
+	/** Fixed gap between the name tag's top edge and the heart bar's bottom edge. */
+	private static final float NAMETAG_GAP = HEART_ANCHOR_HEIGHT - STANDING_ATTACHMENT_Y - NAMETAG_TEXT_LIFT;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	/** Alpha of the name tag's see-through copy: vanilla colour 0x20FFFFFF (EntityRenderer.renderLabelIfPresent). */
 	private static final int SEE_THROUGH_ALPHA = 0x20;
 
 	private HeartsAboveHeadRenderer() {
+	}
+
+	/**
+	 * The heart anchor for a name tag attachment at {@code attachmentY}:
+	 * vanilla's half-block text lift plus the fixed gap, calibrated so a
+	 * standing player (attachment 1.8) renders the bar at the untouched
+	 * 0.4.7 height of 2.35.
+	 */
+	static float heartAnchorForAttachment(float attachmentY) {
+		return attachmentY + NAMETAG_TEXT_LIFT + NAMETAG_GAP;
+	}
+
+	/**
+	 * Drops every per-player render state (blink windows and height
+	 * smoothers). Must run when the play connection ends: a rejoin hands the
+	 * same UUID a fresh entity whose tick counter restarted, and stale state
+	 * would replay old blink windows. Runs on the render thread via
+	 * {@code client.execute} (the disconnect hook can fire on a network
+	 * thread).
+	 */
+	public static void clearPerPlayerState() {
+		PlayerBlinkTracker.clear();
 	}
 
 	/**
@@ -140,9 +184,9 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	public static void render(PlayerEntity player, EntityRenderDispatcher dispatcher, MatrixStack matrices,
-			VertexConsumerProvider vertexConsumers, int light) {
+			VertexConsumerProvider vertexConsumers, int light, float tickDelta) {
 		try {
-			renderHearts(player, dispatcher, matrices, vertexConsumers, light);
+			renderHearts(player, dispatcher, matrices, vertexConsumers, light, tickDelta);
 		} catch (Throwable t) {
 			if (reportedFailures < MAX_REPORTED_FAILURES) {
 				reportedFailures++;
@@ -158,7 +202,7 @@ public final class HeartsAboveHeadRenderer {
 	}
 
 	private static void renderHearts(PlayerEntity player, EntityRenderDispatcher dispatcher, MatrixStack matrices,
-			VertexConsumerProvider vertexConsumers, int light) {
+			VertexConsumerProvider vertexConsumers, int light, float tickDelta) {
 		if (!HeartsPlusConfig.isEnabled() || player.isSpectator()) {
 			skipOnce("mod disabled or player is a spectator");
 			return;
@@ -188,17 +232,19 @@ public final class HeartsAboveHeadRenderer {
 		}
 
 		float health = player.getHealth();
-		// The animation state is fed before the pass selection below, so the
-		// vanilla animation keeps ticking for every rendered player.
-		HeartAnimationState animationState = PlayerBlinkTracker.stateFor(player.getUuid());
-		animationState.tick(MathHelper.ceil(health), player.age, player.timeUntilRegen > 0,
-				HeartsPlusConfig.isBlinkAnimationEnabled());
+		// The tracker (animation + height smoothing) is fed before the pass
+		// selection below, so the vanilla animation keeps ticking for every
+		// rendered player; the returned anchor is the smoothed name tag
+		// attachment height for this frame.
+		float anchorY = PlayerBlinkTracker.update(player.getUuid(), health, player.age, player.timeUntilRegen > 0,
+				nameTagAttachmentY(player, tickDelta));
 
 		// The bar always shows the current health instantly (no vanilla
 		// renderHealthValue lag); the blink window from the animation state
 		// only adds the flash overlays. With the animation off the state arms
 		// no windows, so `blinking` stays false and the blinking sprites are
 		// never resolved (the resolve calls sit inside the `blinking` gate).
+		HeartAnimationState animationState = PlayerBlinkTracker.stateFor(player.getUuid());
 		boolean blinking = animationState.isBlinking();
 		HeartBarLayout layout = HeartBarLayout.of(health, player.getMaxHealth(), player.getAbsorptionAmount());
 		if (layout.slots() <= 0) {
@@ -221,7 +267,10 @@ public final class HeartsAboveHeadRenderer {
 		int overlayTo = animationState.blinkOverlayEnd();
 
 		matrices.push();
-		matrices.translate(0.0F, HEART_ANCHOR_HEIGHT, 0.0F);
+		// The bar rides the vanilla name tag attachment point (smoothed per
+		// player in PlayerBlinkTracker), so it sits right above the tag and
+		// glides with it through sneak/swim/fly poses.
+		matrices.translate(0.0F, anchorY, 0.0F);
 		// The vanilla name tag recipe: billboard the bar towards the camera.
 		matrices.multiply(dispatcher.getRotation());
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
@@ -327,7 +376,8 @@ public final class HeartsAboveHeadRenderer {
 		// quad-sorts every batch back-to-front (BuiltBuffer.sortQuads on the
 		// translucent text layers, VertexSorter.BY_DISTANCE), which also
 		// restores the painter order inside each batch.
-		List<HeartPass> passes = HeartPass.passesFor(player.isSneaking(), HeartsPlusConfig.isShowBehindBlocks());
+		List<HeartPass> passes = HeartPass.passesFor(player.isSneaking(), player.isInvisible(),
+				HeartsPlusConfig.isShowBehindBlocks());
 		if (passes.contains(HeartPass.SEE_THROUGH)) {
 			for (HeartSubmit submit : submits) {
 				submitPass(vertexConsumers, matrices, submit.sprite(), light, HeartPass.SEE_THROUGH, submit.geometry());
@@ -345,6 +395,20 @@ public final class HeartsAboveHeadRenderer {
 			LOGGER.info("Hearts submitted above a player for the first time ({} hearts, texture {})",
 					layout.slots(), container.texture());
 		}
+	}
+
+	/**
+	 * The Y of the vanilla name tag attachment point, computed with the same
+	 * call EntityRenderer.renderLabelIfPresent makes for its own label — the
+	 * player type declares no NAME_TAG attachment, so the call returns null
+	 * for players and the bar reads the bounding box height instead. The
+	 * point follows the pose (standing 1.8, crouching 1.5, swimming 0.6)
+	 * because {@code getAttachments} serves the current pose dimensions.
+	 */
+	private static float nameTagAttachmentY(PlayerEntity player, float tickDelta) {
+		Vec3d attachment = player.getAttachments().getPointNullable(EntityAttachmentType.NAME_TAG, 0,
+				player.getYaw(tickDelta));
+		return attachment == null ? player.getHeight() : (float) attachment.y;
 	}
 
 	/** True when any slot draws a full (half=false) or half (half=true) absorption heart. */

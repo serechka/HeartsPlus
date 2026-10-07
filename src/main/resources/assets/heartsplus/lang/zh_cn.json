@@ -16,5 +16,6 @@
   "heartsplus.message.enabled": "生命值显示已开启",
   "heartsplus.message.disabled": "生命值显示已关闭",
   "heartsplus.config.show_invisible": "显示隐身",
+  "heartsplus.config.show_invisible.tooltip": "部分服务器可能禁止此类功能，请查阅服务器规则。仅显示穿戴盔甲的隐身玩家的生命值。",
   "heartsplus.config.show_behind_blocks": "隔墙显示"
 }

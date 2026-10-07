@@ -34,7 +34,7 @@ public abstract class LivingEntityRendererMixin {
 		if (entity instanceof PlayerEntity player) {
 			// Health is read straight off the entity here: the render call
 			// happens every frame anyway, so the values cannot lag behind.
-			HeartsAboveHeadRenderer.render(player, this.dispatcher, matrices, vertexConsumers, light);
+			HeartsAboveHeadRenderer.render(player, this.dispatcher, matrices, vertexConsumers, light, tickDelta);
 		}
 	}
 }
