@@ -4,7 +4,8 @@ plugins {
 
 // This branch targets the classic 1.21.0/1.21.1 line using Yarn mappings
 // (pre render-state API: LivingEntityRenderer.render receives the entity).
-version = "${project.mod_version}-1.21.0-fabric"
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.7+1.21.0-fabric.jar
+version = project.mod_version
 group = project.maven_group
 
 base {

@@ -2,6 +2,7 @@ package com.heartsplus;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.BufferedWriter;
@@ -24,30 +25,48 @@ public final class HeartsPlusConfig {
 	public static final double MAX_SCALE = 4.0;
 	public static final double MIN_RENDER_DISTANCE = 8.0;
 	public static final double MAX_RENDER_DISTANCE = 128.0;
-	public static final int MIN_HEART_OFFSET = -20;
+	public static final int MIN_HEART_OFFSET = -40;
 	public static final int MAX_HEART_OFFSET = 40;
 	/**
-	 * Default bar lift above the fixed anchor, in GUI pixels: the height the
-	 * owner playtested as ideal in 0.4.6. Stored configs are deliberately not
-	 * migrated — a saved 0 meant "no extra lift" before this change and still
-	 * means exactly that.
+	 * Default bar lift above the fixed anchor, in GUI pixels. Since 0.4.7 the
+	 * anchor itself sits at the height the owner playtested as ideal (the old
+	 * 10px default lift was folded into it), so 0 is that height and the
+	 * setting tunes up and down symmetrically.
 	 */
-	public static final int DEFAULT_HEART_OFFSET = 10;
+	public static final int DEFAULT_HEART_OFFSET = 0;
 	/**
 	 * heartOffset stored by pre-0.4.4 configs. It was the default compensation
-	 * for the old, higher anchor; the anchor now carries that compensation, so
-	 * a stored -10 means "the old default" and migrates to 0 (same on-screen
-	 * position). A -10 set deliberately after the migration is folded in too —
-	 * accepted, since the value only ever existed as that compensation.
+	 * for the old, higher anchor; the 0.4.4 migration lands it at
+	 * {@link #LEGACY_DEFAULT_LANDING} before the 0.4.7 shift applies. A -10 set
+	 * deliberately after that migration is folded in too — accepted, since the
+	 * value only ever existed as that compensation.
 	 */
 	private static final int LEGACY_HEART_OFFSET = -10;
 	/** Where a {@link #LEGACY_HEART_OFFSET} lands: the old default's on-screen position, independent of {@link #DEFAULT_HEART_OFFSET}. */
 	private static final int LEGACY_DEFAULT_LANDING = 0;
+	/**
+	 * 0.4.7 folded the old 10px default lift into the anchor
+	 * (2.10 + 10 × 0.025 = 2.35), so every pre-0.4.7 stored offset compensates
+	 * by this much to render at the same height.
+	 */
+	private static final int ANCHOR_ABSORBED_PIXELS = 10;
+	/** The 0.4.6 default, kept for old files that omit heartOffset entirely. */
+	private static final int PREVIOUS_DEFAULT_HEART_OFFSET = 10;
+	/**
+	 * On-disk schema version. Files written before 0.4.7 carry no key and are
+	 * detected by its absence (Gson would otherwise keep the current-version
+	 * initializer below), so the one-time migration can never run twice on a
+	 * migrated file: every save writes the version along with the new values.
+	 */
+	private static final int CONFIG_VERSION = 1;
 
 	private static HeartsPlusConfig instance = new HeartsPlusConfig();
 
 	// Gson writes these directly; all mutations go through the clamped static
 	// accessors below, so nothing can bypass validation.
+	private int configVersion = CONFIG_VERSION;
+	/** Set once parse() has migrated an older file; load() then persists the result immediately. */
+	private transient boolean migrated;
 	private boolean modEnabled = true;
 	private boolean showOwnHearts = false;
 	private boolean showInvisiblePlayers = false;
@@ -187,6 +206,12 @@ public final class HeartsPlusConfig {
 			HeartsPlusConfig read = parse(Files.readString(path, StandardCharsets.UTF_8));
 			if (read != null) {
 				instance = read;
+				if (read.migrated) {
+					// Persist the migrated values (and the schema version that
+					// makes the one-time shift stick) before anything else can
+					// read the file back.
+					save();
+				}
 			}
 		} catch (IOException | com.google.gson.JsonParseException e) {
 			HeartsPlusLog.LOGGER.error("Failed to read config file {}", path, e);
@@ -196,10 +221,23 @@ public final class HeartsPlusConfig {
 	/** Parses JSON into a clamped config, or null for empty input; package-private for tests. */
 	static HeartsPlusConfig parse(String json) {
 		HeartsPlusConfig read = GSON.fromJson(json, HeartsPlusConfig.class);
-		if (read != null) {
-			read.clamp();
-			read.migrate();
+		if (read == null) {
+			return null;
 		}
+		// Files written before 0.4.7 carry no configVersion key, but Gson has
+		// already filled the field with the current-version initializer, so the
+		// key's presence must be checked on the raw JSON tree.
+		com.google.gson.JsonObject tree = JsonParser.parseString(json).getAsJsonObject();
+		if (!tree.has("configVersion")) {
+			read.configVersion = 0;
+			if (!tree.has("heartOffset")) {
+				// An old file without heartOffset stored the 0.4.6 default;
+				// Gson has filled the new default (0), which must not shift.
+				read.heartOffset = PREVIOUS_DEFAULT_HEART_OFFSET;
+			}
+		}
+		read.clamp();
+		read.migrate();
 		return read;
 	}
 
@@ -227,16 +265,29 @@ public final class HeartsPlusConfig {
 	}
 
 	/**
-	 * One-time migration for configs saved by older versions: a stored -10 is
-	 * the old default that compensated the higher anchor (2.3), and the anchor
-	 * is lowered now, so it becomes 0 — the identical on-screen position.
+	 * One-time migration of pre-0.4.7 configs. The 0.4.7 anchor absorbed the
+	 * old 10px default lift (2.10 + 10 × 0.025 = 2.35), so every stored offset
+	 * shifts down by 10 to render at exactly its old height; a pre-0.4.4 -10
+	 * first lands on the 0.4.6 position per the earlier migration rule. Runs
+	 * only when the parsed file carried no current {@code configVersion}, and
+	 * every save afterwards writes that version, so the shift can never be
+	 * applied a second time to the same file.
 	 */
 	private void migrate() {
+		if (configVersion >= CONFIG_VERSION) {
+			return;
+		}
+		migrated = true;
 		if (heartOffset == LEGACY_HEART_OFFSET) {
-			// Land on the position the legacy default actually rendered at
-			// (anchor 2.10 + 0), not on the new 0.4.6 playtested default.
+			// Land on the position the legacy default actually rendered at in
+			// 0.4.6 (anchor 2.10 + 0), not on the new default height.
 			heartOffset = LEGACY_DEFAULT_LANDING;
 		}
+		heartOffset -= ANCHOR_ABSORBED_PIXELS;
+		// Hand-edited files can carry out-of-range values that clamp() already
+		// folded before the shift; re-clamp so nothing off-range persists.
+		heartOffset = (int) sanitize(heartOffset, DEFAULT_HEART_OFFSET, MIN_HEART_OFFSET, MAX_HEART_OFFSET);
+		configVersion = CONFIG_VERSION;
 	}
 
 	/**
