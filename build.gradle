@@ -17,6 +17,11 @@ repositories {
 		name = 'TerraformersMC'
 		url = 'https://maven.terraformersmc.com/releases/'
 	}
+	// Cloth Config is distributed through shedaniel's maven.
+	maven {
+		name = 'Shedaniel'
+		url = 'https://maven.shedaniel.me/'
+	}
 }
 
 loom {
@@ -36,6 +41,10 @@ dependencies {
 
 	// ModMenu (optional at runtime, entrypoint is only used when present)
 	implementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// Cloth Config (required at runtime since 0.4.9, owns the settings screen;
+	// the bundled fallback screen still exists for a cloth-less classpath)
+	implementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
 
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'

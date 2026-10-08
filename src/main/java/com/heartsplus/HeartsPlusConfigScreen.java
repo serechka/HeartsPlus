@@ -17,8 +17,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 /**
- * Mod Menu compatible settings screen. Toggles apply immediately;
- * sliders write their value live but only persist when the screen closes.
+ * Bundled flat settings screen, the fallback for a classpath without Cloth
+ * Config (the main screen since 0.4.9 is the Cloth one). Toggles apply
+ * immediately; sliders write their value live but only persist when the
+ * screen closes. Every setting of the Cloth screen exists here too, in one
+ * flat list.
  */
 public class HeartsPlusConfigScreen extends Screen {
 	private static final int WIDGET_WIDTH = 155;
@@ -43,7 +46,8 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(0, 1, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(1, 0, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(),
 				HeartsPlusConfig::setShowInvisiblePlayers, "heartsplus.config.show_invisible.tooltip");
-		addToggle(1, 1, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
+		addToggle(1, 1, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
+				HeartsPlusConfig::setBlinkAnimation);
 
 		CycleButton<Boolean> textures = CycleButton.booleanBuilder(
 				Component.translatable("option.heartsplus.textures.vanilla"),
@@ -52,8 +56,11 @@ public class HeartsPlusConfigScreen extends Screen {
 				.create(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value));
 		this.grid.addChild(textures, 2, 0);
-		addToggle(2, 1, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
-				HeartsPlusConfig::setBlinkAnimation);
+		this.grid.addChild(slider("heartsplus.config.follow_smoothing",
+				HeartsPlusConfig.MIN_FOLLOW_SMOOTHNESS, HeartsPlusConfig.MAX_FOLLOW_SMOOTHNESS,
+				HeartsPlusConfig.getFollowSmoothness(),
+				v -> HeartsPlusConfig.setFollowSmoothnessSilently((int) Math.round(v)),
+				v -> percentLabel("heartsplus.config.follow_smoothing", (int) Math.round(v), false)), 2, 1);
 
 		this.grid.addChild(slider("heartsplus.config.scale", HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE, HeartsPlusConfig.getScale(),
 				HeartsPlusConfig::setScaleSilently, v -> Component.translatable("heartsplus.config.scale",
@@ -61,10 +68,28 @@ public class HeartsPlusConfigScreen extends Screen {
 		this.grid.addChild(slider("heartsplus.config.render_distance", HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE, HeartsPlusConfig.getRenderDistance(),
 				HeartsPlusConfig::setRenderDistanceSilently, v -> Component.translatable("heartsplus.config.render_distance",
 						String.format(Locale.ROOT, "%.0f", v))), 3, 1);
-		this.grid.addChild(slider("heartsplus.config.heart_offset", HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getHeartOffset(),
-				v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
-				v -> Component.translatable("heartsplus.config.heart_offset",
-						String.format(Locale.ROOT, "%.0f", v))), 4, 0);
+
+		this.grid.addChild(slider("heartsplus.config.wall_opacity",
+				HeartsPlusConfig.MIN_WALL_OPACITY, HeartsPlusConfig.MAX_WALL_OPACITY,
+				HeartsPlusConfig.getWallOpacity(),
+				v -> HeartsPlusConfig.setWallOpacitySilently((int) Math.round(v)),
+				v -> percentLabel("heartsplus.config.wall_opacity", (int) Math.round(v), true)), 4, 0);
+		this.grid.addChild(slider("heartsplus.config.height_standing",
+				HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getOffsetStanding(),
+				v -> HeartsPlusConfig.setOffsetStandingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_standing", (int) Math.round(v))), 4, 1);
+		this.grid.addChild(slider("heartsplus.config.height_sneaking",
+				HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getOffsetSneaking(),
+				v -> HeartsPlusConfig.setOffsetSneakingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_sneaking", (int) Math.round(v))), 5, 0);
+		this.grid.addChild(slider("heartsplus.config.height_swimming",
+				HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getOffsetSwimming(),
+				v -> HeartsPlusConfig.setOffsetSwimmingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_swimming", (int) Math.round(v))), 5, 1);
+		this.grid.addChild(slider("heartsplus.config.height_flying",
+				HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET, HeartsPlusConfig.getOffsetFlying(),
+				v -> HeartsPlusConfig.setOffsetFlyingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_flying", (int) Math.round(v))), 6, 0);
 		this.rootLayout.addChild(this.grid);
 
 		LinearLayout buttons = LinearLayout.horizontal().spacing(10);
@@ -117,6 +142,17 @@ public class HeartsPlusConfigScreen extends Screen {
 	private static AbstractSliderButton slider(String key, double min, double max, double initial,
 			DoubleConsumer setter, DoubleFunction<Component> message) {
 		return new ConfigSlider(0, 0, WIDGET_WIDTH, WIDGET_HEIGHT, min, max, initial, setter, message);
+	}
+
+	private static Component percentLabel(String labelKey, int value, boolean withPercentSign) {
+		if (value == 0) {
+			return Component.translatable("options.off");
+		}
+		return Component.translatable(labelKey).copy().append(": " + value + (withPercentSign ? "%" : ""));
+	}
+
+	private static Component offsetLabel(String labelKey, int value) {
+		return Component.translatable(labelKey).copy().append(": " + value);
 	}
 
 	private static final class ConfigSlider extends AbstractSliderButton {
