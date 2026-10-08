@@ -5,7 +5,7 @@ package com.heartsplus.render;
  * glide the heart bar along the vanilla name tag attachment point through
  * pose changes (sneak, swim, fall flying). Deliberately holds no Minecraft
  * classes so it is directly unit-testable; one instance lives per player in
- * {@link BlinkTracker}, nothing is allocated per frame.
+ * {@link PlayerBlinkTracker}, nothing is allocated per frame.
  *
  * <p>Each update moves the height by {@code (target - current) * k} with
  * {@code k = 1 - exp(-dt * rate)} - the exact-in-dt form of the per-frame
