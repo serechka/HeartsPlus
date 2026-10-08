@@ -55,7 +55,6 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Health Indicators | ON | Master toggle for the whole mod |
 | Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
-| Show Behind Blocks | ON | Off = walls hide the hearts; on = a dimmed see-through copy stays visible through them, like a name tag |
 | Animation | ON | Damage-blink flash and healing pop above a player |
 | Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
