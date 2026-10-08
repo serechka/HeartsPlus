@@ -53,13 +53,14 @@ import org.slf4j.Logger;
  * absorption, then the blink overlay, with the health hearts on top — the
  * same painter order the HUD uses, flattened onto z layers. The pass set
  * mirrors EntityRenderer.renderLabelIfPresent: everyone gets the depth-tested
- * bright pass, players who are not sneaking additionally get a dimmed
- * half-transparent see-through copy when "show behind blocks" is on, and a
- * sneaking player gets only the bright pass (the label gates its see-through
- * copy on !isSneaking) — bright in the open, hidden behind blocks. Geometry
- * is submitted in passes per texture (containers, absorption, blinking,
- * health) because default-texture mode binds individual files while pack
- * mode draws sprite regions of the shared GUI atlas.</p>
+ * bright pass, players who are not sneaking additionally get a see-through
+ * copy whose opacity follows the See-Through Opacity setting (0 drops the
+ * pass entirely), and a sneaking player gets only the bright pass (the label
+ * gates its see-through copy on !isSneaking) — bright in the open, hidden
+ * behind walls at opacity 0. Geometry is submitted in passes per texture
+ * (containers, absorption, blinking, health) because default-texture mode
+ * binds individual files while pack mode draws sprite regions of the shared
+ * GUI atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -114,10 +115,31 @@ public final class HeartsAboveHeadRenderer {
 	/** Fixed gap between the name tag's top edge and the heart bar's bottom edge. */
 	private static final float NAMETAG_GAP = HEART_ANCHOR_HEIGHT - STANDING_ATTACHMENT_Y - NAMETAG_TEXT_LIFT;
 	private static final float PIXELS_PER_BLOCK = 0.025F;
-	/** Alpha of the name tag's see-through copy: vanilla colour 0x20FFFFFF (EntityRenderer.renderLabelIfPresent). */
+	/**
+	 * Base alpha of the name tag's see-through copy: vanilla colour 0x20FFFFFF
+	 * (EntityRenderer.renderLabelIfPresent). Since 0.4.9 it is the reference
+	 * the wall-opacity slider scales around: the default 50 renders exactly
+	 * this dimming, 100 doubles it.
+	 */
 	private static final int SEE_THROUGH_ALPHA = 0x20;
 
 	private HeartsAboveHeadRenderer() {
+	}
+
+	/**
+	 * Bar lift on top of the smoothed anchor for the entity's current pose,
+	 * in GUI pixels - one slider per pose family since 0.4.9. Vanilla pose
+	 * names: {@code CROUCHING} is the sneak pose, {@code SWIMMING} covers the
+	 * water crawl and {@code FALL_FLYING} the elytra; every other pose
+	 * (sitting, sleeping, dying, ...) uses the standing slider.
+	 */
+	private static int heartOffsetForPose(net.minecraft.entity.EntityPose pose) {
+		return switch (pose) {
+			case CROUCHING -> HeartsPlusConfig.getOffsetSneaking();
+			case SWIMMING -> HeartsPlusConfig.getOffsetSwimming();
+			case FALL_FLYING -> HeartsPlusConfig.getOffsetFlying();
+			default -> HeartsPlusConfig.getOffsetStanding();
+		};
 	}
 
 	/**
@@ -276,7 +298,9 @@ public final class HeartsAboveHeadRenderer {
 		matrices.multiply(dispatcher.getRotation());
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		matrices.scale(pixelScale, -pixelScale, pixelScale);
-		matrices.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
+		// The per-pose lift rides along in GUI pixels: it lands inside the
+		// already-scaled space, exactly like the old single offset did.
+		matrices.translate(0.0F, -heartOffsetForPose(player.getPose()), 0.0F);
 
 		// Sprites are resolved lazily per pass so empty passes (no blinking, no
 		// absorption) cost nothing at all. Each family sits on its own z layer
@@ -377,16 +401,25 @@ public final class HeartsAboveHeadRenderer {
 		// quad-sorts every batch back-to-front (BuiltBuffer.sortQuads on the
 		// translucent text layers, VertexSorter.BY_DISTANCE), which also
 		// restores the painter order inside each batch.
-		List<HeartPass> passes = HeartPass.passesFor(player.isSneaking(), player.isInvisible(),
-				HeartsPlusConfig.isShowBehindBlocks());
+		int wallOpacity = HeartsPlusConfig.getWallOpacity();
+		List<HeartPass> passes = HeartPass.passesFor(player.isSneaking(), player.isInvisible(), wallOpacity);
+		// This era's see-through dimming is vanilla's own 0x20
+		// (EntityRenderer.renderLabelIfPresent, plain light coords). The
+		// wall-opacity slider scales around it: the default 50 renders the
+		// untouched 0.4.8 dimming, 100 doubles it, 0 drops the pass entirely
+		// (HeartPass.passesFor).
+		int seeThroughAlpha = (int) Math.round(wallOpacity * (double) SEE_THROUGH_ALPHA
+				/ HeartsPlusConfig.DEFAULT_WALL_OPACITY);
 		if (passes.contains(HeartPass.SEE_THROUGH)) {
 			for (HeartSubmit submit : submits) {
-				submitPass(vertexConsumers, matrices, submit.sprite(), light, HeartPass.SEE_THROUGH, submit.geometry());
+				submitPass(vertexConsumers, matrices, submit.sprite(), light, HeartPass.SEE_THROUGH, seeThroughAlpha,
+						submit.geometry());
 			}
 		}
 		if (passes.contains(HeartPass.NORMAL)) {
 			for (HeartSubmit submit : submits) {
-				submitPass(vertexConsumers, matrices, submit.sprite(), light, HeartPass.NORMAL, submit.geometry());
+				submitPass(vertexConsumers, matrices, submit.sprite(), light, HeartPass.NORMAL, seeThroughAlpha,
+						submit.geometry());
 			}
 		}
 
@@ -435,9 +468,9 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void skipOnce(String reason) {
 		if (reportedSkips.add(reason)) {
-			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showBehindBlocks={}, vanillaTextures={}, scale={}, renderDistance={}]",
+			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, wallOpacity={}, vanillaTextures={}, scale={}, renderDistance={}]",
 					reason, HeartsPlusConfig.isEnabled(), HeartsPlusConfig.isShowOwnHearts(),
-					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowBehindBlocks(),
+					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.getWallOpacity(),
 					HeartsPlusConfig.isVanillaTextures(), HeartsPlusConfig.getScale(), HeartsPlusConfig.getRenderDistance());
 		}
 	}
@@ -495,8 +528,9 @@ public final class HeartsAboveHeadRenderer {
 	 * Submits one sprite's geometry as the single vanilla name tag pass
 	 * selected by {@code pass} (EntityRenderer.renderLabelIfPresent): the
 	 * depth-tested bright one with the plain light coords, or the see-through
-	 * copy without depth test, dimmed to the name tag's half-transparent
-	 * white (0x20FFFFFF) and lit by the same plain light coords.
+	 * copy without depth test, dimmed to {@code seeThroughAlpha} (the
+	 * wall-opacity slider scaled around this era's vanilla dimming, 0x20 —
+	 * the 0.4.8 default) and lit by the same plain light coords.
 	 *
 	 * <p>The passes must draw in a fixed order — see-through layers below the
 	 * bright pass — which this era gets from the submission sweeps in
@@ -506,11 +540,11 @@ public final class HeartsAboveHeadRenderer {
 	 * layer is requested, so the draw order is the submission order.</p>
 	 */
 	private static void submitPass(VertexConsumerProvider vertexConsumers, MatrixStack matrices,
-			ResolvedSprite sprite, int light, HeartPass pass, PassGeometry geometry) {
+			ResolvedSprite sprite, int light, HeartPass pass, int seeThroughAlpha, PassGeometry geometry) {
 		Matrix4f matrix = matrices.peek().getPositionMatrix();
 		if (pass == HeartPass.SEE_THROUGH) {
 			VertexConsumer seeThrough = vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(sprite.texture()));
-			geometry.emit(seeThrough, matrix, light, SEE_THROUGH_ALPHA);
+			geometry.emit(seeThrough, matrix, light, seeThroughAlpha);
 		} else {
 			VertexConsumer vertices = vertexConsumers.getBuffer(RenderLayer.getText(sprite.texture()));
 			geometry.emit(vertices, matrix, light, 255);

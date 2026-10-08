@@ -6,6 +6,7 @@ import com.terraformersmc.modmenu.api.ModMenuApi;
 public class HeartsPlusModMenu implements ModMenuApi {
 	@Override
 	public ConfigScreenFactory<?> getModConfigScreenFactory() {
-		return HeartsPlusConfigScreen::new;
+		// Cloth Config screen when present, bundled flat screen otherwise.
+		return HeartsPlusScreens::create;
 	}
 }
