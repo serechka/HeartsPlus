@@ -55,7 +55,6 @@ Open **Mod Menu → HeartsPlus → ⚙️**, or press the settings keybind (unbo
 | Health Indicators | ON | Master toggle for the whole mod |
 | Show Above Own Player | OFF | Draw hearts above yourself (visible in F5 / freecam) |
 | Show Invisible Players | OFF | Off = no hearts on invisible players; on = hearts only while they wear armour |
-| Show Sneaking | OFF | Off = sneaking players get no hearts (like their name tag) |
 | Heart Textures | Current | Vanilla = built-in look, Current = your active resource pack |
 | Scale | 1.0 | Heart size, ×0.25 – ×4 |
 | Render Distance | 64 | Maximum distance in blocks, 8 – 128 |
@@ -66,8 +65,8 @@ Settings persist to `config/heartsplus.json` and apply instantly.
 **Keybinds** (Controls → HeartsPlus):
 | Key | Default | Action |
 |---|:---:|---|
-| Toggle Health Indicators | **H** | Quick on/off with an action-bar confirmation |
-| Open HeartsPlus Settings | *unbound* | Open the config screen |
+| Toggle Health Indicators | *unbound* | Quick on/off with an action-bar confirmation |
+| Open HeartsPlus Settings | **H** | Open the config screen |
 
 ## 🔧 Building from source
 

@@ -10,13 +10,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * The Cloth Config settings screen (0.4.9): six tabs in a fixed order -
- * Behavior, Animation, Invisibility &amp; Walls, Position, Distance,
- * Appearance - one entry per setting, the library's search field on top and
- * its standard per-entry reset button on every entry with a default. Entry
- * save consumers write straight into the clamped config accessors; Cloth
- * Config only runs them on the screen's save action, so cancelling drops
- * every change.
+ * The Cloth Config settings screen (0.5.0): three tabs in a fixed order -
+ * Behavior, Appearance, Position - one entry per setting, the library's
+ * search field on top and its standard per-entry reset button on every entry
+ * with a default. Entry save consumers write straight into the clamped
+ * config accessors; Cloth Config only runs them on the screen's save action,
+ * so cancelling drops every change.
  *
  * <p>Sliders are integer-based because this Cloth Config version ships int
  * and long sliders only: Scale and the two percent settings travel as
@@ -34,38 +33,51 @@ final class HeartsPlusClothConfigScreen {
 				.setSavingRunnable(HeartsPlusConfig::save);
 		ConfigEntryBuilder entries = builder.entryBuilder();
 
-		// 1. Behavior - the master switch.
+		// 1. Behavior - when hearts are shown at all.
 		ConfigCategory behavior = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.behavior"));
 		behavior.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.enabled"), HeartsPlusConfig.isEnabled())
 				.setDefaultValue(true)
 				.setSaveConsumer(HeartsPlusConfig::setEnabled)
 				.build());
-
-		// 2. Animation.
-		ConfigCategory animation = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.animation"));
-		animation.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.animation"), HeartsPlusConfig.isBlinkAnimationEnabled())
-				.setDefaultValue(true)
-				.setSaveConsumer(HeartsPlusConfig::setBlinkAnimation)
+		behavior.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.show_own"), HeartsPlusConfig.isShowOwnHearts())
+				.setDefaultValue(false)
+				.setSaveConsumer(HeartsPlusConfig::setShowOwnHearts)
 				.build());
-
-		// 3. Invisibility & Walls.
-		ConfigCategory invisibility = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.invisibility"));
-		invisibility.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.show_invisible"), HeartsPlusConfig.isShowInvisiblePlayers())
+		behavior.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.show_invisible"), HeartsPlusConfig.isShowInvisiblePlayers())
 				.setDefaultValue(false)
 				.setTooltip(Component.translatable("heartsplus.config.show_invisible.tooltip"))
 				.setSaveConsumer(HeartsPlusConfig::setShowInvisiblePlayers)
 				.build());
-		invisibility.addEntry(intSlider(entries, Component.translatable("heartsplus.config.wall_opacity"),
+		behavior.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.animation"), HeartsPlusConfig.isBlinkAnimationEnabled())
+				.setDefaultValue(true)
+				.setSaveConsumer(HeartsPlusConfig::setBlinkAnimation)
+				.build());
+		behavior.addEntry(intSlider(entries, Component.translatable("heartsplus.config.distance_name"),
+				(int) HeartsPlusConfig.getRenderDistance(), 128,
+				(int) HeartsPlusConfig.MIN_RENDER_DISTANCE, (int) HeartsPlusConfig.MAX_RENDER_DISTANCE,
+				blocks -> HeartsPlusConfig.setRenderDistance(blocks),
+				value -> Component.literal(String.format("%d m", value))));
+
+		// 2. Appearance - how the hearts look.
+		ConfigCategory appearance = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.appearance"));
+		appearance.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.textures"), HeartsPlusConfig.isVanillaTextures())
+				.setDefaultValue(false)
+				.setYesNoTextSupplier(value -> Component.translatable(value
+						? "option.heartsplus.textures.vanilla" : "option.heartsplus.textures.current"))
+				.setSaveConsumer(HeartsPlusConfig::setVanillaTextures)
+				.build());
+		appearance.addEntry(intSlider(entries, Component.translatable("heartsplus.config.scale_name"),
+				(int) Math.round(HeartsPlusConfig.getScale() * 100.0), 100,
+				(int) Math.round(HeartsPlusConfig.MIN_SCALE * 100.0), (int) Math.round(HeartsPlusConfig.MAX_SCALE * 100.0),
+				percent -> HeartsPlusConfig.setScale(percent / 100.0),
+				value -> Component.literal(String.format("%.2f", value / 100.0))));
+		appearance.addEntry(intSlider(entries, Component.translatable("heartsplus.config.wall_opacity"),
 				HeartsPlusConfig.getWallOpacity(), HeartsPlusConfig.DEFAULT_WALL_OPACITY,
 				HeartsPlusConfig.MIN_WALL_OPACITY, HeartsPlusConfig.MAX_WALL_OPACITY,
 				HeartsPlusConfig::setWallOpacity, HeartsPlusClothConfigScreen::opacityLabel));
 
-		// 4. Position.
+		// 3. Position - where the hearts sit.
 		ConfigCategory position = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.position"));
-		position.addEntry(intSlider(entries, Component.translatable("heartsplus.config.follow_smoothing"),
-				HeartsPlusConfig.getFollowSmoothness(), HeartsPlusConfig.DEFAULT_FOLLOW_SMOOTHNESS,
-				HeartsPlusConfig.MIN_FOLLOW_SMOOTHNESS, HeartsPlusConfig.MAX_FOLLOW_SMOOTHNESS,
-				HeartsPlusConfig::setFollowSmoothness, HeartsPlusClothConfigScreen::smoothnessLabel));
 		position.addEntry(heightSlider(entries, Component.translatable("heartsplus.config.height_standing"),
 				HeartsPlusConfig.getOffsetStanding(), HeartsPlusConfig::setOffsetStanding));
 		position.addEntry(heightSlider(entries, Component.translatable("heartsplus.config.height_sneaking"),
@@ -74,28 +86,10 @@ final class HeartsPlusClothConfigScreen {
 				HeartsPlusConfig.getOffsetSwimming(), HeartsPlusConfig::setOffsetSwimming));
 		position.addEntry(heightSlider(entries, Component.translatable("heartsplus.config.height_flying"),
 				HeartsPlusConfig.getOffsetFlying(), HeartsPlusConfig::setOffsetFlying));
-
-		// 5. Distance.
-		ConfigCategory distance = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.distance"));
-		distance.addEntry(intSlider(entries, Component.translatable("heartsplus.config.distance_name"),
-				(int) HeartsPlusConfig.getRenderDistance(), 128,
-				(int) HeartsPlusConfig.MIN_RENDER_DISTANCE, (int) HeartsPlusConfig.MAX_RENDER_DISTANCE,
-				blocks -> HeartsPlusConfig.setRenderDistance(blocks),
-				value -> Component.literal(String.format("%d m", value))));
-
-		// 6. Appearance.
-		ConfigCategory appearance = builder.getOrCreateCategory(Component.translatable("heartsplus.config.tab.appearance"));
-		appearance.addEntry(intSlider(entries, Component.translatable("heartsplus.config.scale_name"),
-				(int) Math.round(HeartsPlusConfig.getScale() * 100.0), 100,
-				(int) Math.round(HeartsPlusConfig.MIN_SCALE * 100.0), (int) Math.round(HeartsPlusConfig.MAX_SCALE * 100.0),
-				percent -> HeartsPlusConfig.setScale(percent / 100.0),
-				value -> Component.literal(String.format("%.2f", value / 100.0))));
-		appearance.addEntry(entries.startBooleanToggle(Component.translatable("heartsplus.config.textures"), HeartsPlusConfig.isVanillaTextures())
-				.setDefaultValue(false)
-				.setYesNoTextSupplier(value -> Component.translatable(value
-						? "option.heartsplus.textures.vanilla" : "option.heartsplus.textures.current"))
-				.setSaveConsumer(HeartsPlusConfig::setVanillaTextures)
-				.build());
+		position.addEntry(intSlider(entries, Component.translatable("heartsplus.config.follow_smoothing"),
+				HeartsPlusConfig.getFollowSmoothness(), HeartsPlusConfig.DEFAULT_FOLLOW_SMOOTHNESS,
+				HeartsPlusConfig.MIN_FOLLOW_SMOOTHNESS, HeartsPlusConfig.MAX_FOLLOW_SMOOTHNESS,
+				HeartsPlusConfig::setFollowSmoothness, HeartsPlusClothConfigScreen::smoothnessLabel));
 
 		return builder.build();
 	}

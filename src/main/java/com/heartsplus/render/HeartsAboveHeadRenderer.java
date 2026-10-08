@@ -155,13 +155,21 @@ public final class HeartsAboveHeadRenderer {
 	 * forced NEAREST filtering: they are 9x9 pixel art and must stay crisp at
 	 * any scale.
 	 */
-	public static void warmUpVanillaTextures(TextureManager textureManager) {
+	public static void warmUpVanillaTextures(TextureManager textureManager, ResourceManager resourceManager) {
 		if (vanillaTexturesWarmed) {
 			return;
 		}
 		vanillaTexturesWarmed = true;
 		for (HeartType type : HeartType.values()) {
 			for (Identifier texture : type.fileTextures()) {
+				// A missing resource would be swapped for the checkerboard
+				// texture instead of failing (registerAndLoad swallows the
+				// load error), so the fallback is decided here.
+				if (!resourceManager.getResource(texture).isPresent()) {
+					unavailableFileTextures.add(texture);
+					LOGGER.warn("Default-pack heart texture {} is missing; falling back to atlas sprites", texture);
+					continue;
+				}
 				try {
 					textureManager.registerAndLoad(texture, new DefaultPackTexture(texture));
 				} catch (Exception e) {
