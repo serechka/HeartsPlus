@@ -9,6 +9,14 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+repositories {
+	// Cloth Config is distributed through shedaniel's maven.
+	maven {
+		name = 'Shedaniel'
+		url = 'https://maven.shedaniel.me/'
+	}
+}
+
 base {
 	archivesName = project.archives_base_name
 }
@@ -31,6 +39,12 @@ neoForge {
 }
 
 dependencies {
+	// Cloth Config (required at runtime since 0.4.9, owns the settings screen;
+	// the bundled fallback screen still exists for a cloth-less classpath).
+	// The 20.x line publishes its jar under the "neoforge" classifier; ModDev
+	// picks the mod jar off the classpath into the dev runtime on its own.
+	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}:neoforge"
+
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
