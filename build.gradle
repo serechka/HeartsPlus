@@ -32,10 +32,10 @@ neoForge {
 dependencies {
 	// Cloth Config (required at runtime since 0.4.9, owns the settings screen;
 	// the bundled fallback screen still exists for a cloth-less classpath).
-	// compileOnly + testImplementation: the library is a separate mod at
+	// implementation: the library is a separate mod at runtime (required),
 	// runtime, never bundled into the heartsplus jar.
-	compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
-	testCompileOnly "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
+	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
+	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
 
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
