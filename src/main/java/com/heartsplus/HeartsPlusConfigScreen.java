@@ -13,9 +13,11 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 /**
- * Settings screen for the 1.21.x NeoForge line. Toggles apply
- * immediately; sliders write their value live but only persist when the
- * screen closes.
+ * Bundled flat settings screen for the 1.21.x NeoForge line, the fallback
+ * for a classpath without Cloth Config (the main screen since 0.4.9 is the
+ * Cloth one). Toggles apply immediately; sliders write their value live but
+ * only persist when the screen closes. Every setting of the Cloth screen
+ * exists here too, in one flat list.
  */
 public class HeartsPlusConfigScreen extends Screen {
 	private static final int WIDGET_WIDTH = 150;
@@ -40,7 +42,8 @@ public class HeartsPlusConfigScreen extends Screen {
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);
 		addToggle(left, y + ROW_STEP, "heartsplus.config.show_invisible", HeartsPlusConfig.isShowInvisiblePlayers(),
 				HeartsPlusConfig::setShowInvisiblePlayers, "heartsplus.config.show_invisible.tooltip");
-		addToggle(right, y + ROW_STEP, "heartsplus.config.show_behind_blocks", HeartsPlusConfig.isShowBehindBlocks(), HeartsPlusConfig::setShowBehindBlocks);
+		addToggle(right, y + ROW_STEP, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
+				HeartsPlusConfig::setBlinkAnimation);
 		addRenderableWidget(CycleButton.builder(
 						(Boolean value) -> value
 								? Component.translatable("option.heartsplus.textures.vanilla")
@@ -48,8 +51,9 @@ public class HeartsPlusConfigScreen extends Screen {
 				.withInitialValue(HeartsPlusConfig.isVanillaTextures())
 				.create(left, y + 2 * ROW_STEP, WIDGET_WIDTH, WIDGET_HEIGHT, Component.translatable("heartsplus.config.textures"),
 						(button, value) -> HeartsPlusConfig.setVanillaTextures(value)));
-		addToggle(right, y + 2 * ROW_STEP, "heartsplus.config.animation", HeartsPlusConfig.isBlinkAnimationEnabled(),
-				HeartsPlusConfig::setBlinkAnimation);
+		addRenderableWidget(slider(right, y + 2 * ROW_STEP, HeartsPlusConfig.MIN_FOLLOW_SMOOTHNESS, HeartsPlusConfig.MAX_FOLLOW_SMOOTHNESS,
+				HeartsPlusConfig.getFollowSmoothness(), v -> HeartsPlusConfig.setFollowSmoothnessSilently((int) Math.round(v)),
+				v -> percentLabel("heartsplus.config.follow_smoothing", (int) Math.round(v), false)));
 
 		addRenderableWidget(slider(left, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_SCALE, HeartsPlusConfig.MAX_SCALE,
 				HeartsPlusConfig.getScale(), HeartsPlusConfig::setScaleSilently,
@@ -57,14 +61,27 @@ public class HeartsPlusConfigScreen extends Screen {
 		addRenderableWidget(slider(right, y + 3 * ROW_STEP, HeartsPlusConfig.MIN_RENDER_DISTANCE, HeartsPlusConfig.MAX_RENDER_DISTANCE,
 				HeartsPlusConfig.getRenderDistance(), HeartsPlusConfig::setRenderDistanceSilently,
 				v -> Component.translatable("heartsplus.config.render_distance", String.format(Locale.ROOT, "%.0f", v))));
-		addRenderableWidget(slider(left, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
-				HeartsPlusConfig.getHeartOffset(), v -> HeartsPlusConfig.setHeartOffsetSilently((int) Math.round(v)),
-				v -> Component.translatable("heartsplus.config.heart_offset", String.format(Locale.ROOT, "%.0f", v))));
+
+		addRenderableWidget(slider(left, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_WALL_OPACITY, HeartsPlusConfig.MAX_WALL_OPACITY,
+				HeartsPlusConfig.getWallOpacity(), v -> HeartsPlusConfig.setWallOpacitySilently((int) Math.round(v)),
+				v -> percentLabel("heartsplus.config.wall_opacity", (int) Math.round(v), true)));
+		addRenderableWidget(slider(right, y + 4 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+				HeartsPlusConfig.getOffsetStanding(), v -> HeartsPlusConfig.setOffsetStandingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_standing", (int) Math.round(v))));
+		addRenderableWidget(slider(left, y + 5 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+				HeartsPlusConfig.getOffsetSneaking(), v -> HeartsPlusConfig.setOffsetSneakingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_sneaking", (int) Math.round(v))));
+		addRenderableWidget(slider(right, y + 5 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+				HeartsPlusConfig.getOffsetSwimming(), v -> HeartsPlusConfig.setOffsetSwimmingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_swimming", (int) Math.round(v))));
+		addRenderableWidget(slider(left, y + 6 * ROW_STEP, HeartsPlusConfig.MIN_HEART_OFFSET, HeartsPlusConfig.MAX_HEART_OFFSET,
+				HeartsPlusConfig.getOffsetFlying(), v -> HeartsPlusConfig.setOffsetFlyingSilently((int) Math.round(v)),
+				v -> offsetLabel("heartsplus.config.height_flying", (int) Math.round(v))));
 
 		addRenderableWidget(Button.builder(Component.translatable("gui.done"), button -> onClose())
-				.bounds(centerX - WIDGET_WIDTH - 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.bounds(centerX - WIDGET_WIDTH - 5, y + 7 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 		addRenderableWidget(Button.builder(Component.translatable("heartsplus.config.reset"), button -> resetAndRebuild())
-				.bounds(centerX + 5, y + 5 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
+				.bounds(centerX + 5, y + 7 * ROW_STEP + 8, WIDGET_WIDTH, WIDGET_HEIGHT).build());
 	}
 
 	@Override
@@ -100,6 +117,17 @@ public class HeartsPlusConfigScreen extends Screen {
 	private static AbstractSliderButton slider(int x, int y, double min, double max, double initial,
 			DoubleConsumer setter, DoubleFunction<Component> message) {
 		return new ConfigSlider(x, y, WIDGET_WIDTH, WIDGET_HEIGHT, min, max, initial, setter, message);
+	}
+
+	private static Component percentLabel(String labelKey, int value, boolean withPercentSign) {
+		if (value == 0) {
+			return Component.translatable("options.off");
+		}
+		return Component.translatable(labelKey).copy().append(": " + value + (withPercentSign ? "%" : ""));
+	}
+
+	private static Component offsetLabel(String labelKey, int value) {
+		return Component.translatable(labelKey).copy().append(": " + value);
 	}
 
 	private static final class ConfigSlider extends AbstractSliderButton {

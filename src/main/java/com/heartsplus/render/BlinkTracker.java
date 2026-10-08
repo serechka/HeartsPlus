@@ -36,6 +36,10 @@ public final class BlinkTracker {
 	 * game tick — the cadence the vanilla HUD ticks with. With the animation
 	 * toggle off the state still tracks the health (so re-enabling cannot
 	 * flash a change that happened meanwhile) but arms no windows.
+	 *
+	 * <p>The smoother's rate and speed cap come from the Follow Smoothing
+	 * setting on every call; a smoothness of zero passes rate 0, which makes
+	 * the update snap to the target (smoothing off).</p>
 	 */
 	public static float update(UUID playerId, float health, int tick, boolean invulnerable, float attachmentY) {
 		HeartAnimationState state = animationStates.computeIfAbsent(playerId, id -> new HeartAnimationState());
@@ -47,7 +51,8 @@ public final class BlinkTracker {
 			// spec says the height snaps with the reset instead of sliding.
 			smoother.snapTo(targetY);
 		}
-		return smoother.update(targetY, Util.getMillis());
+		return smoother.update(targetY, Util.getMillis(), HeartsPlusConfig.followRatePerSecond(),
+				(float) HeartsPlusConfig.followSpeedCapBlocksPerSecond());
 	}
 
 	/** First half-heart index carrying a blinking overlay sprite (inclusive); 0 when the overlay is empty. */
