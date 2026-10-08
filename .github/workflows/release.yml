@@ -21,6 +21,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF_NAME}"
-          gh release create "$TAG" --verify-tag             --title "HeartsPlus ${TAG#v}"             --notes "Download the mod for your loader and game version on Modrinth: https://modrinth.com/mod/heartsplus
-
-Full changelog: https://modrinth.com/mod/heartsplus/changelog"
+          NOTES="Download the mod for your loader and game version on Modrinth: https://modrinth.com/mod/heartsplus"
+          NOTES="$NOTES
+          
+          Full changelog: https://modrinth.com/mod/heartsplus/changelog"
+          gh release create "$TAG" --verify-tag --title "HeartsPlus ${TAG#v}" --notes "$NOTES"
