@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * The two vanilla name tag passes a heart bar is submitted with, the
- * (sneaking, invisible, showBehindBlocks) rule that picks between them, and
+ * (sneaking, invisible, wallOpacity) rule that picks between them, and
  * the submit order that keeps their blending deterministic. Deliberately
  * holds no Minecraft classes so it is directly unit-testable.
  *
@@ -13,14 +13,16 @@ import java.util.List;
  * player's label is the single depth-tested NORMAL pass, while a player who
  * is not sneaking gets the see-through copy first and the bright pass on
  * top. The see-through copy is only ever added for players who are neither
- * sneaking nor invisible: both rules are stronger than the showBehindBlocks
- * toggle (owner decisions, 0.4.5 and 0.4.8 — the see-through copy would
- * betray an invisible player's position through walls).</p>
+ * sneaking nor invisible: both rules are stronger than the wall opacity
+ * setting (owner decisions, 0.4.5 and 0.4.8 - the see-through copy would
+ * betray an invisible player's position through walls). Since 0.4.9 the
+ * show-behind-blocks toggle is a slider: a positive wall opacity keeps the
+ * see-through copy alive, zero drops it (hearts fully hidden behind walls).</p>
  */
 public enum HeartPass {
 	/** Depth-tested bright pass (vanilla text render layer, nametag +2 emission). */
 	NORMAL,
-	/** Depth-blind dimmed copy (vanilla text-see-through render layer, 0x80FFFFFF). */
+	/** Depth-blind dimmed copy (vanilla text-see-through render layer). */
 	SEE_THROUGH;
 
 	/** The bar's see-through z layers: containers, absorption, blink overlay, health. */
@@ -40,15 +42,23 @@ public enum HeartPass {
 	}
 
 	/**
-	 * Pass set for a (sneaking, invisible, showBehindBlocks) triple — the
+	 * Vertex alpha of the see-through copy for a wall opacity in the 0-100
+	 * scale: N percent of the fully bright 255.
+	 */
+	public static int seeThroughAlpha(int wallOpacity) {
+		return (int) Math.round(Math.clamp(wallOpacity, 0, 100) * 255.0 / 100.0);
+	}
+
+	/**
+	 * Pass set for a (sneaking, invisible, wallOpacity) triple - the
 	 * vanilla name tag rule plus the invisible one: an invisible player is
 	 * drawn with the single depth-tested pass like a sneaking one, so their
-	 * hearts hide behind walls no matter what the toggle says.
+	 * hearts hide behind walls no matter what the opacity says.
 	 */
-	public static List<HeartPass> passesFor(boolean sneaking, boolean invisible, boolean showBehindBlocks) {
+	public static List<HeartPass> passesFor(boolean sneaking, boolean invisible, int wallOpacity) {
 		if (sneaking || invisible) {
 			return List.of(NORMAL);
 		}
-		return showBehindBlocks ? List.of(NORMAL, SEE_THROUGH) : List.of(NORMAL);
+		return wallOpacity > 0 ? List.of(NORMAL, SEE_THROUGH) : List.of(NORMAL);
 	}
 }

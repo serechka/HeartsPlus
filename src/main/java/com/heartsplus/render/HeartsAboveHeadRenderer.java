@@ -48,13 +48,14 @@ import org.slf4j.Logger;
  * absorption, then the blink overlay, with the health hearts on top — the
  * same painter order the HUD uses, flattened onto z layers. The pass set
  * mirrors EntityRenderer.renderLabelIfPresent: everyone gets the depth-tested
- * bright pass, players who are neither sneaking nor invisible additionally
- * get a dimmed half-transparent see-through copy when "show behind blocks"
- * is on, and a sneaking or invisible player gets only the bright pass (the
+ * bright pass, players who are not sneaking additionally get a see-through
+ * copy whose opacity follows the See-Through Opacity setting (0 drops the
+ * pass entirely), and a sneaking player gets only the bright pass (the
  * label's see-through branch is gated on {@code !state.sneaking}) — bright
- * in the open, hidden behind blocks. Geometry is drawn in passes per texture
- * (containers, health, blinking, absorption) because default-texture mode
- * binds individual sprites instead of the shared GUI atlas.</p>
+ * in the open, hidden behind walls at opacity 0. Geometry is drawn in passes
+ * per texture (containers, health, blinking, absorption) because
+ * default-texture mode binds individual sprites instead of the shared GUI
+ * atlas.</p>
  */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -110,10 +111,25 @@ public final class HeartsAboveHeadRenderer {
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	/** Vanilla name tag text is drawn with this much extra light emission (EntityRenderer.renderLabelIfPresent). */
 	private static final int NAMETAG_EMISSION = 2;
-	/** Alpha of the nametag's see-through copy: vanilla colour 0x80FFFFFF — half-transparent white. */
-	private static final int SEE_THROUGH_ALPHA = 0x80;
 
 	private HeartsAboveHeadRenderer() {
+	}
+
+	/**
+	 * Bar lift on top of the smoothed anchor for the entity's current pose,
+	 * in GUI pixels - one slider per pose family since 0.4.9. Yarn pose
+	 * names: {@code CROUCHING} is the sneak pose, {@code SWIMMING} covers the
+	 * water crawl and {@code GLIDING} the elytra (Mojmap's FALL_FLYING);
+	 * every other pose (sitting, sleeping, dying, ...) uses the standing
+	 * slider.
+	 */
+	private static int heartOffsetForPose(net.minecraft.entity.EntityPose pose) {
+		return switch (pose) {
+			case CROUCHING -> HeartsPlusConfig.getOffsetSneaking();
+			case SWIMMING -> HeartsPlusConfig.getOffsetSwimming();
+			case GLIDING -> HeartsPlusConfig.getOffsetFlying();
+			default -> HeartsPlusConfig.getOffsetStanding();
+		};
 	}
 
 	/**
@@ -248,7 +264,9 @@ public final class HeartsAboveHeadRenderer {
 		matrices.multiply(cameraRotation, 0.0F, 0.0F, 0.0F);
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		matrices.scale(pixelScale, -pixelScale, pixelScale);
-		matrices.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
+		// The per-pose lift rides along in GUI pixels: it lands inside the
+		// already-scaled space, exactly like the old single offset did.
+		matrices.translate(0.0F, -heartOffsetForPose(state.pose), 0.0F);
 		Matrix4f positionMatrix = matrices.peek().getPositionMatrix();
 
 		// Passes are drawn lazily per family so empty passes (no blinking, no
@@ -258,7 +276,9 @@ public final class HeartsAboveHeadRenderer {
 		// offsets the depth test z-fights the quads apart. The families keep
 		// that painter order in the list below, which doubles as the
 		// see-through submit order (HeartPass see-through layers 0-3).
-		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, state.invisible, HeartsPlusConfig.isShowBehindBlocks());
+		int wallOpacity = HeartsPlusConfig.getWallOpacity();
+		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, state.invisible, wallOpacity);
+		int seeThroughAlpha = HeartPass.seeThroughAlpha(wallOpacity);
 		List<HeartFamilyPass> families = new ArrayList<>();
 		float zStep = HeartLayerSpacing.zStep(MathHelper.sqrt((float) state.squaredDistanceToCamera));
 		final float containerZ = 0.0F;
@@ -335,7 +355,7 @@ public final class HeartsAboveHeadRenderer {
 			}));
 		}
 
-		submitPasses(vertexConsumers, families, passes, light);
+		submitPasses(vertexConsumers, families, passes, light, seeThroughAlpha);
 
 		matrices.pop();
 		if (!reportedFirstHeart) {
@@ -367,9 +387,9 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void skipOnce(String reason) {
 		if (reportedSkips.add(reason)) {
-			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showBehindBlocks={}, vanillaTextures={}, scale={}, renderDistance={}]",
+			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, wallOpacity={}, vanillaTextures={}, scale={}, renderDistance={}]",
 					reason, HeartsPlusConfig.isEnabled(), HeartsPlusConfig.isShowOwnHearts(),
-					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowBehindBlocks(),
+					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.getWallOpacity(),
 					HeartsPlusConfig.isVanillaTextures(), HeartsPlusConfig.getScale(), HeartsPlusConfig.getRenderDistance());
 		}
 	}
@@ -419,9 +439,10 @@ public final class HeartsAboveHeadRenderer {
 	 * Submits the collected families as the vanilla name tag passes selected
 	 * by {@code passes}: the depth-tested bright ones with the nametag's +2
 	 * light emission, and — when the pass set has it — the see-through copies
-	 * without depth test, dimmed to the nametag's half-transparent white
-	 * (0x80FFFFFF) and lit by the plain light coords, bit-exact with
-	 * EntityRenderer.renderLabelIfPresent.
+	 * without depth test, dimmed to {@code seeThroughAlpha} (the wall-opacity
+	 * slider's percent of 255; the 0.4.8 default matched the nametag's
+	 * half-transparent white, 0x80FFFFFF) and lit by the plain light coords,
+	 * bit-exact with EntityRenderer.renderLabelIfPresent.
 	 *
 	 * <p>The see-through copies of every family are submitted first (in the
 	 * families list's HUD painter order, HeartPass see-through layers 0-3)
@@ -443,15 +464,15 @@ public final class HeartsAboveHeadRenderer {
 	 * requested before its bright text with the +2 emission.</p>
 	 */
 	private static void submitPasses(VertexConsumerProvider vertexConsumers, List<HeartFamilyPass> families,
-			List<HeartPass> passes, int light) {
+			List<HeartPass> passes, int light, int seeThroughAlpha) {
 		int emissiveLight = LightmapTextureManager.applyEmission(light, NAMETAG_EMISSION);
 		if (passes.contains(HeartPass.SEE_THROUGH)) {
 			for (HeartFamilyPass family : families) {
 				// Same geometry again without a depth test, so it stays
 				// visible through walls — exactly how vanilla name tags draw
-				// their see-through part. Drawn only when the option is on,
-				// so the default path stays untouched.
-				family.emitter().emit(vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(family.sprite().texture())), light, SEE_THROUGH_ALPHA);
+				// their see-through part. Drawn only when the opacity is
+				// positive, so the default path stays untouched.
+				family.emitter().emit(vertexConsumers.getBuffer(RenderLayer.getTextSeeThrough(family.sprite().texture())), light, seeThroughAlpha);
 			}
 		}
 		if (passes.contains(HeartPass.NORMAL)) {

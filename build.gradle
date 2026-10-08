@@ -4,7 +4,7 @@ plugins {
 
 // This branch targets the legacy 1.21.x line using Yarn mappings.
 // Targets the 1.21.2/1.21.3 stretch, which still has the classic render path.
-// mod_version carries the full semver incl. build metadata: heartsplus-0.4.8+1.21.2-fabric.jar
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.9+1.21.2-fabric.jar
 version = project.mod_version
 group = project.maven_group
 
@@ -17,6 +17,11 @@ repositories {
 	maven {
 		name = 'TerraformersMC'
 		url = 'https://maven.terraformersmc.com/releases/'
+	}
+	// Cloth Config is distributed through shedaniel's maven.
+	maven {
+		name = 'Shedaniel'
+		url = 'https://maven.shedaniel.me/'
 	}
 }
 
@@ -38,6 +43,15 @@ dependencies {
 
 	// ModMenu (optional at runtime, entrypoint is only used when present)
 	modImplementation "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	// Cloth Config (required at runtime since 0.4.9, owns the settings screen;
+	// the bundled fallback screen still exists for a cloth-less classpath)
+	modImplementation("me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}") {
+		// The POM pins ancient fabric-api module versions; the modules shipped
+		// through the fabric-api dependency above are the right ones for this
+		// game version.
+		exclude(group: "net.fabricmc.fabric-api")
+	}
 
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
