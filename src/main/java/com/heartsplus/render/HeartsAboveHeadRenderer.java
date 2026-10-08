@@ -48,13 +48,13 @@ import org.slf4j.Logger;
  * the same painter order the HUD uses, flattened onto z layers. The pass set
 	 * mirrors the vanilla name tag submit (LabelCommandRenderer.Commands.add):
 	 * everyone gets the depth-tested bright pass, players who are not sneaking
-	 * additionally get a dimmed half-transparent see-through copy when "show
-	 * behind blocks" is on, and a sneaking player gets only the bright pass
-	 * (EntityRenderer passes !sneaking as the nametag's notSneaking flag) —
-	 * bright in the open, hidden behind blocks. Geometry is submitted in
-	 * passes per texture (containers, health, blinking, absorption) because
-	 * default-texture mode binds individual sprites instead of the shared GUI
-	 * atlas.</p>
+	 * additionally get a see-through copy whose opacity follows the
+	 * See-Through Opacity setting (0 drops the pass entirely), and a sneaking
+	 * player gets only the bright pass (EntityRenderer passes !sneaking as the
+	 * nametag's notSneaking flag) — bright in the open, hidden behind blocks
+	 * at opacity 0. Geometry is submitted in passes per texture (containers,
+	 * health, blinking, absorption) because default-texture mode binds
+	 * individual sprites instead of the shared GUI atlas.</p>
 	 */
 public final class HeartsAboveHeadRenderer {
 	private static final Logger LOGGER = HeartsPlusLog.LOGGER;
@@ -109,11 +109,25 @@ public final class HeartsAboveHeadRenderer {
 	private static final float PIXELS_PER_BLOCK = 0.025F;
 	/** Vanilla name tag text is drawn with this much extra light emission (LabelCommandRenderer.Commands.add). */
 	private static final int NAMETAG_EMISSION = 2;
-	/** Alpha of the nametag's see-through copy: vanilla colour 0x80FFFFFF — half-transparent white. */
-	private static final int SEE_THROUGH_ALPHA = 0x80;
 	private static final Identifier GUI_ATLAS = Identifier.ofVanilla("textures/atlas/gui.png");
 
 	private HeartsAboveHeadRenderer() {
+	}
+
+	/**
+	 * Bar lift on top of the smoothed anchor for the entity's current pose,
+	 * in GUI pixels - one slider per pose family since 0.4.9. 1.21.9 pose
+	 * names: {@code CROUCHING} is the sneak pose, {@code SWIMMING} covers the
+	 * water crawl and {@code GLIDING} the elytra; every other pose
+	 * (sitting, sleeping, dying, ...) uses the standing slider.
+	 */
+	private static int heartOffsetForPose(net.minecraft.entity.EntityPose pose) {
+		return switch (pose) {
+			case CROUCHING -> HeartsPlusConfig.getOffsetSneaking();
+			case SWIMMING -> HeartsPlusConfig.getOffsetSwimming();
+			case GLIDING -> HeartsPlusConfig.getOffsetFlying();
+			default -> HeartsPlusConfig.getOffsetStanding();
+		};
 	}
 
 	/**
@@ -248,7 +262,9 @@ public final class HeartsAboveHeadRenderer {
 		matrices.multiply(cameraState.orientation, 0.0F, 0.0F, 0.0F);
 		float pixelScale = PIXELS_PER_BLOCK * (float) HeartsPlusConfig.getScale();
 		matrices.scale(pixelScale, -pixelScale, pixelScale);
-		matrices.translate(0.0F, -HeartsPlusConfig.getHeartOffset(), 0.0F);
+		// The per-pose lift rides along in GUI pixels: it lands inside the
+		// already-scaled space, exactly like the old single offset did.
+		matrices.translate(0.0F, -heartOffsetForPose(state.pose), 0.0F);
 
 		int light = state.light;
 
@@ -259,21 +275,23 @@ public final class HeartsAboveHeadRenderer {
 		// offsets the depth test z-fights the quads apart. The layer index
 		// doubles as the see-through submit order (HeartPass.renderOrder).
 		float zStep = HeartLayerSpacing.zStep(MathHelper.sqrt((float) state.squaredDistanceToCamera));
-		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, state.invisible, HeartsPlusConfig.isShowBehindBlocks());
+		int wallOpacity = HeartsPlusConfig.getWallOpacity();
+		List<HeartPass> passes = HeartPass.passesFor(state.sneaking, state.invisible, wallOpacity);
+		int seeThroughAlpha = HeartPass.seeThroughAlpha(wallOpacity);
 		final float containerZ = 0.0F;
 		final float absorbingZ = zStep;
 		final float familyBlinkingZ = 2 * zStep;
 		final float familyZ = 3 * zStep;
 
 		ResolvedSprite container = resolve(HeartType.CONTAINER, false, blinking, atlasManager);
-		submitPass(queue, passes, matrices, container, 0, containerZ, light, (entry, vertices, l, alpha) -> {
+		submitPass(queue, passes, matrices, container, 0, containerZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 			for (int slot = 0; slot < layout.slots(); slot++) {
 				emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), container, l, containerZ, alpha);
 			}
 		});
 		if (hasAbsorption(layout, false)) {
 			ResolvedSprite absorbingFull = resolve(absorptionFamily, false, false, atlasManager);
-			submitPass(queue, passes, matrices, absorbingFull, 1, absorbingZ, light, (entry, vertices, l, alpha) -> {
+			submitPass(queue, passes, matrices, absorbingFull, 1, absorbingZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && !layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), absorbingFull, l, absorbingZ, alpha);
@@ -283,7 +301,7 @@ public final class HeartsAboveHeadRenderer {
 		}
 		if (hasAbsorption(layout, true)) {
 			ResolvedSprite absorbingHalf = resolve(absorptionFamily, true, false, atlasManager);
-			submitPass(queue, passes, matrices, absorbingHalf, 1, absorbingZ, light, (entry, vertices, l, alpha) -> {
+			submitPass(queue, passes, matrices, absorbingHalf, 1, absorbingZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 				for (int slot = layout.healthContainers(); slot < layout.slots(); slot++) {
 					if (layout.hasAbsorptionHeart(slot) && layout.isAbsorptionHalf(slot)) {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), absorbingHalf, l, absorbingZ, alpha);
@@ -302,7 +320,7 @@ public final class HeartsAboveHeadRenderer {
 			int overlayLastSlot = Math.min((overlayTo - 1) / 2, layout.slots() - 1);
 			int overlayHalfSlot = overlayTo % 2 == 1 ? overlayLastSlot : -1;
 			ResolvedSprite familyFullBlinking = resolve(family, false, true, atlasManager);
-			submitPass(queue, passes, matrices, familyFullBlinking, 2, familyBlinkingZ, light, (entry, vertices, l, alpha) -> {
+			submitPass(queue, passes, matrices, familyFullBlinking, 2, familyBlinkingZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 				for (int slot = overlayFirstSlot; slot <= overlayLastSlot; slot++) {
 					if (slot != overlayHalfSlot) {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyFullBlinking, l, familyBlinkingZ, alpha);
@@ -310,15 +328,15 @@ public final class HeartsAboveHeadRenderer {
 				}
 			});
 			if (overlayHalfSlot >= 0) {
-				ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
-				submitPass(queue, passes, matrices, familyHalfBlinking, 2, familyBlinkingZ, light,
-						(entry, vertices, l, alpha) -> emitHeart(vertices, entry.getPositionMatrix(), layout.x(overlayHalfSlot),
-								layout.yTop(overlayHalfSlot), familyHalfBlinking, l, familyBlinkingZ, alpha));
+			ResolvedSprite familyHalfBlinking = resolve(family, true, true, atlasManager);
+			submitPass(queue, passes, matrices, familyHalfBlinking, 2, familyBlinkingZ, light, seeThroughAlpha,
+					(entry, vertices, l, alpha) -> emitHeart(vertices, entry.getPositionMatrix(), layout.x(overlayHalfSlot),
+							layout.yTop(overlayHalfSlot), familyHalfBlinking, l, familyBlinkingZ, alpha));
 			}
 		}
 		if (hasHealth(layout, false)) {
 			ResolvedSprite familyFull = resolve(family, false, false, atlasManager);
-			submitPass(queue, passes, matrices, familyFull, 3, familyZ, light, (entry, vertices, l, alpha) -> {
+			submitPass(queue, passes, matrices, familyFull, 3, familyZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && !layout.isHealthHalf(slot)) {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyFull, l, familyZ, alpha);
@@ -328,7 +346,7 @@ public final class HeartsAboveHeadRenderer {
 		}
 		if (hasHealth(layout, true)) {
 			ResolvedSprite familyHalf = resolve(family, true, false, atlasManager);
-			submitPass(queue, passes, matrices, familyHalf, 3, familyZ, light, (entry, vertices, l, alpha) -> {
+			submitPass(queue, passes, matrices, familyHalf, 3, familyZ, light, seeThroughAlpha, (entry, vertices, l, alpha) -> {
 				for (int slot = 0; slot < layout.slots(); slot++) {
 					if (layout.hasHealthHeart(slot) && layout.isHealthHalf(slot)) {
 						emitHeart(vertices, entry.getPositionMatrix(), layout.x(slot), layout.yTop(slot), familyHalf, l, familyZ, alpha);
@@ -367,9 +385,9 @@ public final class HeartsAboveHeadRenderer {
 
 	private static void skipOnce(String reason) {
 		if (reportedSkips.add(reason)) {
-			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, showBehindBlocks={}, vanillaTextures={}, scale={}, renderDistance={}]",
+			LOGGER.info("Hearts above a player were skipped: {} [enabled={}, showOwnHearts={}, showInvisible={}, wallOpacity={}, vanillaTextures={}, scale={}, renderDistance={}]",
 					reason, HeartsPlusConfig.isEnabled(), HeartsPlusConfig.isShowOwnHearts(),
-					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.isShowBehindBlocks(),
+					HeartsPlusConfig.isShowInvisiblePlayers(), HeartsPlusConfig.getWallOpacity(),
 					HeartsPlusConfig.isVanillaTextures(), HeartsPlusConfig.getScale(), HeartsPlusConfig.getRenderDistance());
 		}
 	}
@@ -419,9 +437,10 @@ public final class HeartsAboveHeadRenderer {
 	 * Submits one sprite's geometry as the vanilla name tag passes selected by
 	 * {@code passes}: the depth-tested bright one with the nametag's +2 light
 	 * emission, and — when the pass set has it — the see-through copy without
-	 * depth test, dimmed to the nametag's half-transparent white (0x80FFFFFF)
-	 * and lit by the plain light coords, bit-exact with
-	 * LabelCommandRenderer.Commands.add.
+	 * depth test, dimmed to {@code seeThroughAlpha} (the wall-opacity slider's
+	 * percent of 255; the 0.4.8 default matched the nametag's
+	 * half-transparent white, 0x80FFFFFF) and lit by the plain light coords,
+	 * bit-exact with LabelCommandRenderer.Commands.add.
 	 *
 	 * <p>Each pass lands on its own batching-queue order: the see-through
 	 * layers below the bright pass, by construction of the render loop. The
@@ -433,14 +452,14 @@ public final class HeartsAboveHeadRenderer {
 	 * must not share an order.</p>
 	 */
 	private static void submitPass(OrderedRenderCommandQueue queue, List<HeartPass> passes, MatrixStack matrices,
-			ResolvedSprite sprite, int layerIndex, float z, int light, HeartEmitter renderer) {
+			ResolvedSprite sprite, int layerIndex, float z, int light, int seeThroughAlpha, HeartEmitter renderer) {
 		int emissiveLight = LightmapTextureManager.applyEmission(light, NAMETAG_EMISSION);
 		// 1.21.9 keeps the per-texture world-text layers on RenderLayer itself;
 		// the RenderLayers.text helper overloads only appear in 1.21.10+.
 		if (passes.contains(HeartPass.SEE_THROUGH)) {
 			submitCustomGeometry(queue, HeartPass.SEE_THROUGH.renderOrder(layerIndex), matrices,
 					RenderLayer.getTextSeeThrough(sprite.texture()),
-					(entry, vertices) -> renderer.emit(entry, vertices, light, SEE_THROUGH_ALPHA));
+					(entry, vertices) -> renderer.emit(entry, vertices, light, seeThroughAlpha));
 		}
 		if (passes.contains(HeartPass.NORMAL)) {
 			submitCustomGeometry(queue, HeartPass.NORMAL.renderOrder(layerIndex), matrices,
