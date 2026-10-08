@@ -5,12 +5,20 @@ plugins {
 // NeoForge build of HeartsPlus for the legacy Minecraft 1.21.x line
 // (1.21.11, Mojang mappings). Rendering hooks are identical to the
 // Fabric branch; only the bootstrap and packaging are NeoForge.
-// mod_version carries the full semver incl. build metadata: heartsplus-0.4.8+1.21.11-neoforge.jar
+// mod_version carries the full semver incl. build metadata: heartsplus-0.4.9+1.21.11-neoforge.jar
 version = project.mod_version
 group = project.maven_group
 
 base {
 	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Cloth Config is distributed through shedaniel's maven.
+	maven {
+		name = 'Shedaniel'
+		url = 'https://maven.shedaniel.me/'
+	}
 }
 
 neoForge {
@@ -31,6 +39,11 @@ neoForge {
 }
 
 dependencies {
+	// Cloth Config (required at runtime since 0.4.9, owns the settings screen;
+	// the bundled fallback screen still exists for a cloth-less classpath).
+	// Compile-only: the jar ships on the player's mods folder, never bundled.
+	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
+
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

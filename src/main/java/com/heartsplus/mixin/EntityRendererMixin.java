@@ -20,12 +20,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * bridging the gap left by the 1.21.9+ extract/submit rendering split. The
  * player's UUID goes along so BlinkTracker can keep the vanilla HUD
  * blink windows alive across recycled render states.
+ *
+ * <p>Master switch off (0.4.9): this is the tracker's only feed, and the
+ * feed's only entry point is the {@code isEnabled()} guard below. With the
+ * mod disabled the extract returns before {@code heartsplus$update}, so
+ * {@link com.heartsplus.render.BlinkTracker} receives nothing, its maps stay
+ * untouched, and no smoothing or animation state advances per frame. The
+ * submit side (LivingEntityRendererMixin into
+ * HeartsAboveHeadRenderer.renderHearts) re-checks the same flag and draws
+ * nothing, and the warm-up tick in HeartsPlusClient is gated by it too -
+ * there is no other background work: zero load while off.</p>
  */
 @Mixin(EntityRenderer.class)
 public abstract class EntityRendererMixin {
 	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/client/renderer/entity/state/EntityRenderState;F)V",
 			at = @At("RETURN"))
 	private void heartsplus$captureHealth(Entity entity, EntityRenderState state, float partialTicks, CallbackInfo ci) {
+		if (!com.heartsplus.HeartsPlusConfig.isEnabled()) {
+			// Full stop: the tracker is never fed while the mod is off.
+			return;
+		}
 		if (state instanceof HealthHolder holder && entity instanceof Player player) {
 			boolean isLocalPlayer = player == Minecraft.getInstance().player;
 			holder.heartsplus$update(player.getUUID(), player.getHealth(), player.getMaxHealth(),
