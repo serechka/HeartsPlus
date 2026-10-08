@@ -2,6 +2,7 @@ package com.heartsplus;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.neoforged.fml.loading.FMLPaths;
@@ -338,19 +339,32 @@ public final class HeartsPlusConfig {
 					save();
 				}
 			}
-		} catch (IOException | com.google.gson.JsonParseException e) {
+		} catch (IOException e) {
 			HeartsPlusLog.LOGGER.error("Failed to read config file {}", path, e);
 		}
 	}
 
 	/**
-	 * Parses JSON into a clamped config, or null for empty input;
-	 * package-private for tests. Legacy pre-0.4.9 fields no longer exist on
-	 * the class (Gson silently ignores them), so they are pulled off the raw
-	 * JSON tree and folded into their 0.4.9 replacements before the
+	 * Parses JSON into a clamped config, or null for empty or malformed
+	 * input; package-private for tests. Legacy pre-0.4.9 fields no longer
+	 * exist on the class (Gson silently ignores them), so they are pulled off
+	 * the raw JSON tree and folded into their 0.4.9 replacements before the
 	 * one-time version migration runs.
 	 */
 	static HeartsPlusConfig parse(String json) {
+		try {
+			return parseTree(json);
+		} catch (RuntimeException e) {
+			// Gson surfaces some hand-edited values (a string in a double
+			// field, a wrong-typed legacy key) as raw RuntimeExceptions rather
+			// than JsonParseException; the file must degrade to defaults, not
+			// crash the client on startup.
+			HeartsPlusLog.LOGGER.warn("Ignoring malformed config file heartsplus.json, using defaults", e);
+			return null;
+		}
+	}
+
+	private static HeartsPlusConfig parseTree(String json) {
 		HeartsPlusConfig read = GSON.fromJson(json, HeartsPlusConfig.class);
 		if (read == null) {
 			return null;
@@ -362,21 +376,24 @@ public final class HeartsPlusConfig {
 		int version = tree.has("configVersion") ? Math.min(read.configVersion, CONFIG_VERSION) : 0;
 		read.configVersion = version;
 		if (version < 2) {
-			if (tree.has("heartOffset")) {
-				read.offsetStanding = tree.get("heartOffset").getAsInt();
+			JsonElement legacyOffset = tree.get("heartOffset");
+			if (legacyOffset != null && legacyOffset.isJsonPrimitive() && legacyOffset.getAsJsonPrimitive().isNumber()) {
+				read.offsetStanding = legacyOffset.getAsInt();
 			} else if (version < 1) {
 				// An old file without heartOffset stored the 0.4.6 default;
 				// Gson has filled the new default (0), which must not shift.
 				read.offsetStanding = PREVIOUS_DEFAULT_HEART_OFFSET;
 			}
-			if (tree.has("showBehindBlocks")) {
+			JsonElement legacyBehind = tree.get("showBehindBlocks");
+			if (legacyBehind != null && legacyBehind.isJsonPrimitive() && legacyBehind.getAsJsonPrimitive().isBoolean()) {
 				// The 0.4.8 toggle migrates to the slider: false drops the
 				// see-through pass entirely, true keeps the old half alpha.
-				read.wallOpacity = tree.get("showBehindBlocks").getAsBoolean() ? 50 : 0;
+				read.wallOpacity = legacyBehind.getAsBoolean() ? 50 : 0;
 			}
-			// No showBehindBlocks key: the old default true - the 50
-			// initializer already matches. followSmoothness and the three
-			// non-standing pose offsets start at their defaults as well.
+			// A wrong-typed or missing showBehindBlocks key keeps the old
+			// default true - the 50 initializer already matches.
+			// followSmoothness and the three non-standing pose offsets start
+			// at their defaults as well.
 		}
 		read.clamp();
 		read.migrate(version);
