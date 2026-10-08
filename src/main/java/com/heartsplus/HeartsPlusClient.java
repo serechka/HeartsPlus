@@ -58,8 +58,9 @@ public class HeartsPlusClient implements ClientModInitializer {
 			// Default-pack heart textures are only needed in default-texture
 			// mode. Registration must happen outside a frame (lazy mid-frame
 			// uploads stay blank), so it runs from the first tick with the mode
-			// enabled; the call itself no-ops once warmed.
-			if (HeartsPlusConfig.isVanillaTextures()) {
+			// enabled; the call itself no-ops once warmed. Gated by the master
+			// switch too: off means no background work at all.
+			if (HeartsPlusConfig.isEnabled() && HeartsPlusConfig.isVanillaTextures()) {
 				HeartsAboveHeadRenderer.warmUpVanillaTextures(client.getTextureManager(), client.getResourceManager());
 			}
 			while (toggleRenderingKey.wasPressed()) {
@@ -68,7 +69,7 @@ public class HeartsPlusClient implements ClientModInitializer {
 			}
 			while (openSettingsKey.wasPressed()) {
 				if (client.currentScreen == null) {
-					client.setScreen(new HeartsPlusConfigScreen(null));
+					client.setScreen(HeartsPlusScreens.create(null));
 				}
 			}
 		});
