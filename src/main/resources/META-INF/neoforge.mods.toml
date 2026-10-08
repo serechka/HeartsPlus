@@ -30,3 +30,10 @@ type = "required"
 versionRange = "[1.21.4,1.21.6)"
 ordering = "NONE"
 side = "CLIENT"
+
+[[dependencies.heartsplus]]
+modId = "cloth_config"
+type = "required"
+versionRange = "[17.0.144,)"
+ordering = "NONE"
+side = "CLIENT"
