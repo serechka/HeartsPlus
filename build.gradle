@@ -35,7 +35,6 @@ dependencies {
 	// implementation: the library is a separate mod at runtime (required),
 	// runtime, never bundled into the heartsplus jar.
 	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
-	implementation "me.shedaniel.cloth:cloth-config-neoforge:${project.cloth_config_version}"
 
 	// Unit tests for the pure logic (layout, config parsing) — no game bootstrap needed.
 	testImplementation 'org.junit.jupiter:junit-jupiter:6.1.3'
