@@ -16,6 +16,8 @@ jobs:
   github-release:
     runs-on: ubuntu-latest
     steps:
+      - name: Check out the repository (gh needs the git remote to resolve the repo)
+        uses: actions/checkout@v4
       - name: Create GitHub release with a Modrinth link
         env:
           GH_TOKEN: ${{ github.token }}
