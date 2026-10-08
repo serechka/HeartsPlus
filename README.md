@@ -66,8 +66,8 @@ Settings persist to `config/heartsplus.json` and apply instantly.
 **Keybinds** (Controls → HeartsPlus):
 | Key | Default | Action |
 |---|:---:|---|
-| Toggle Health Indicators | **H** | Quick on/off with an action-bar confirmation |
-| Open HeartsPlus Settings | *unbound* | Open the config screen |
+| Toggle Health Indicators | *unbound* | Quick on/off with an action-bar confirmation |
+| Open HeartsPlus Settings | **H** | Open the config screen |
 
 ## 🔧 Building from source
 
