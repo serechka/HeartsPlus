@@ -8,19 +8,21 @@ package com.heartsplus.render;
  * {@link BlinkTracker}, nothing is allocated per frame.
  *
  * <p>Each update moves the height by {@code (target - current) * k} with
- * {@code k = 1 - exp(-dt * RATE)} — the exact-in-dt form of the per-frame
- * lerp, so 30 and 240 fps glide identically — clamped to
- * {@link #MAX_SPEED_BLOCKS_PER_SECOND} so a pose flip after a teleport or
- * respawn cannot smear the bar across the screen.</p>
+ * {@code k = 1 - exp(-dt * rate)} - the exact-in-dt form of the per-frame
+ * lerp, so 30 and 240 fps glide identically - clamped to the passed speed cap
+ * so a pose flip after a teleport or respawn cannot smear the bar across the
+ * screen. Rate and cap arrive as parameters on every update (0.4.9): they are
+ * derived from the Follow Smoothing setting, and the smoother itself stays
+ * parameter-free.</p>
+ *
+ * <p>The chase is always towards the target of the current call. Several
+ * updates within one frame (target changing N times between two timestamps)
+ * advance the clock only on the first of them - dt 0 moves nothing - so the
+ * bar always chases the most recent target and no per-frame lag accumulates.
+ * A rate of zero or less disables smoothing entirely: the update snaps to the
+ * target and returns it immediately.</p>
  */
 public final class HeartHeightSmoother {
-	/**
-	 * Chase rate in 1/seconds. At 8 the remaining gap halves roughly every
-	 * 87 ms, so a pose change settles in the owner-tuned 150–250 ms window.
-	 */
-	public static final double RATE_PER_SECOND = 8.0;
-	/** Cap on the chase speed, so respawn/teleport snaps stay bounded. */
-	public static final float MAX_SPEED_BLOCKS_PER_SECOND = 4.0F;
 	/** Sentinel {@code lastMillis} of an instance that never chased yet. */
 	private static final long NEVER = Long.MIN_VALUE;
 
@@ -36,8 +38,19 @@ public final class HeartHeightSmoother {
 	 * returns the smoothed height. The first call (or the first after
 	 * {@link #snapTo}) snaps instead of gliding, so a freshly seen player
 	 * never plays back an approach from zero.
+	 *
+	 * @param ratePerSecond            exponential chase rate in 1/seconds; zero
+	 *                                 or negative turns smoothing off
+	 * @param maxSpeedBlocksPerSecond  cap on the chase speed, so
+	 *                                 respawn/teleport snaps stay bounded
 	 */
-	public float update(float targetY, long millis) {
+	public float update(float targetY, long millis, double ratePerSecond, float maxSpeedBlocksPerSecond) {
+		if (ratePerSecond <= 0.0) {
+			// Smoothing off: the bar sits exactly on its anchor every frame.
+			this.currentY = targetY;
+			this.lastMillis = millis;
+			return this.currentY;
+		}
 		if (this.lastMillis == NEVER) {
 			this.currentY = targetY;
 			this.lastMillis = millis;
@@ -45,14 +58,14 @@ public final class HeartHeightSmoother {
 		}
 		float dtSeconds = Math.max(0L, millis - this.lastMillis) / 1000.0F;
 		this.lastMillis = millis;
-		float step = (targetY - this.currentY) * (float) (1.0 - Math.exp(-dtSeconds * RATE_PER_SECOND));
-		float maxStep = MAX_SPEED_BLOCKS_PER_SECOND * dtSeconds;
+		float step = (targetY - this.currentY) * (float) (1.0 - Math.exp(-dtSeconds * ratePerSecond));
+		float maxStep = maxSpeedBlocksPerSecond * dtSeconds;
 		this.currentY += Math.clamp(step, -maxStep, maxStep);
 		return this.currentY;
 	}
 
 	/**
-	 * Jumps straight to {@code targetY} with no animation — the companion of
+	 * Jumps straight to {@code targetY} with no animation - the companion of
 	 * the animation-state reset after a world change under the same UUID.
 	 * The clock keeps running, so the next update glides on from the snapped
 	 * height instead of snapping a second time.
