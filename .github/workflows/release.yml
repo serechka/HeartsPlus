@@ -1,147 +1,26 @@
 name: Release
 
-# One release per mod version: builds every branch (Fabric 26.x, Fabric
-# 1.21.11, NeoForge 26.x), uploads the jars to Modrinth through the
-# Modrinth API, and creates a single GitHub release that links to the
-# Modrinth downloads instead of attaching binaries.
-#
-# Required repository secrets:
-#   MODRINTH_TOKEN - Modrinth API token scoped to the HeartsPlus project
-# Push a tag on main to release:  git tag v0.4.0 && git push origin v0.4.0
+# A tag triggers a GitHub Release that links to the Modrinth downloads
+# instead of attaching binaries. The 14 Modrinth lines (7 render eras x
+# 2 loaders) are published manually through the Modrinth API - see
+# HANDOFF section 5 for the recipe and DECISIONS #26 for the pitfalls
+# (Modrinth accepts duplicate version numbers, so check GET before POST).
 on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
-  build-and-publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - branch: main
-            mc: "26.x"
-            loader: fabric
-            gvs: '["26.1","26.2","26.3"]'
-            deps: '[{"project_id":"P7dR8mSH","dependency_type":"required"}]'
-          - branch: "1.21"
-            mc: "1.21.11"
-            loader: fabric
-            gvs: '["1.21.11"]'
-            deps: '[{"project_id":"P7dR8mSH","dependency_type":"required"}]'
-          - branch: neoforge
-            mc: "26.x"
-            loader: neoforge
-            gvs: '["26.1","26.2","26.3"]'
-            deps: '[]'
-          - branch: neoforge-1.21
-            mc: "1.21.11"
-            loader: neoforge
-            gvs: '["1.21.11"]'
-            deps: '[]'
-    steps:
-      - name: Checkout ${{ matrix.branch }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ matrix.branch }}
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 25
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Build mod jar
-        run: ./gradlew build
-
-      # mc-publish@v3.3 fails to resolve 26.x game versions, so the upload
-      # talks to the Modrinth API directly (P7dR8mSH is Fabric API).
-      - name: Upload to Modrinth
-        if: ${{ env.MODRINTH_TOKEN != '' }}
-        env:
-          MC: ${{ matrix.mc }}
-          LOADER: ${{ matrix.loader }}
-          GVS: ${{ matrix.gvs }}
-          DEPS: ${{ matrix.deps }}
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          python3 - "$VERSION" <<'EOF'
-          import glob, json, os, sys, urllib.request, uuid
-
-          version = sys.argv[1]
-          mc, loader = os.environ["MC"], os.environ["LOADER"]
-          jars = [p for p in glob.glob("build/libs/heartsplus-*.jar") if not p.endswith("-sources.jar")]
-          if len(jars) != 1:
-              raise SystemExit(f"expected exactly one jar, found {jars}")
-          jar, fname = jars[0], jars[0].split("/")[-1]
-
-          data = {
-              "project_id": "adAcTcwa",
-              "name": f"HeartsPlus v{version} ({mc} {loader})",
-              "version_number": f"{version}-{mc}-{loader}",
-              "changelog": f"Beta build. See https://github.com/serechka/HeartsPlus/releases/tag/v{version}",
-              "version_type": "beta",
-              "game_versions": json.loads(os.environ["GVS"]),
-              "loaders": [loader],
-              "featured": False,
-              "status": "listed",
-              "dependencies": json.loads(os.environ["DEPS"]),
-              "file_parts": [fname],
-          }
-          boundary = uuid.uuid4().hex
-          with open(jar, "rb") as fh:
-              content = fh.read()
-          body = b"".join([
-              f'--{boundary}\r\nContent-Disposition: form-data; name="data"\r\n\r\n{json.dumps(data)}\r\n'.encode(),
-              f'--{boundary}\r\nContent-Disposition: form-data; name="{fname}"; filename="{fname}"\r\nContent-Type: application/java-archive\r\n\r\n'.encode(),
-              content, b"\r\n",
-              f"--{boundary}--\r\n".encode(),
-          ])
-          req = urllib.request.Request("https://api.modrinth.com/v2/version", data=body, method="POST", headers={
-              "Authorization": os.environ["MODRINTH_TOKEN"],
-              "User-Agent": "HeartsPlus/release",
-              "Content-Type": f"multipart/form-data; boundary={boundary}",
-          })
-          with urllib.request.urlopen(req) as r:
-              print("published:", json.load(r)["version_number"])
-          EOF
-
-      - name: Upload branch artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: heartsplus-${{ matrix.mc }}-${{ matrix.loader }}
-          path: |
-            build/libs/heartsplus-*.jar
-            !build/libs/*-sources.jar
-          if-no-files-found: error
-
   github-release:
     runs-on: ubuntu-latest
-    needs: build-and-publish
-    permissions:
-      contents: write
     steps:
-      - name: Compute bare version number
-        id: version
-        run: echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Create GitHub release with a Modrinth link
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release create "$TAG" --verify-tag             --title "HeartsPlus ${TAG#v}"             --notes "Download the mod for your loader and game version on Modrinth: https://modrinth.com/mod/heartsplus
 
-      - name: Create GitHub release with Modrinth download links
-        uses: softprops/action-gh-release@v2
-        with:
-          name: HeartsPlus ${{ github.ref_name }} (beta)
-          body: |
-            Beta build. Downloads are hosted on Modrinth:
-
-            - [Fabric, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-fabric)
-            - [Fabric, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-1.21.11-fabric)
-            - [NeoForge, Minecraft 26.1-26.3](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-26.x-neoforge)
-            - [NeoForge, Minecraft 1.21.11](https://modrinth.com/mod/heartsplus/version/${{ steps.version.outputs.number }}-1.21.11-neoforge)
-          generate_release_notes: false
-          prerelease: true
+Full changelog: https://modrinth.com/mod/heartsplus/changelog"
