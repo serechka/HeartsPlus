@@ -23,6 +23,8 @@ public class HeartsPlusConfigScreen extends Screen {
 	private static final int WIDGET_WIDTH = 150;
 	private static final int WIDGET_HEIGHT = 20;
 	private static final int ROW_STEP = 24;
+	/** Total layout height: 7 widget rows plus the gap and the Done/Reset row beneath. */
+	private static final int CONTENT_HEIGHT = 7 * ROW_STEP + 8 + WIDGET_HEIGHT;
 
 	private final Screen parent;
 
@@ -36,7 +38,7 @@ public class HeartsPlusConfigScreen extends Screen {
 		int centerX = this.width / 2;
 		int left = centerX - WIDGET_WIDTH - 10;
 		int right = centerX + 10;
-		int y = this.height / 2 - 7 * ROW_STEP;
+		int y = (this.height - CONTENT_HEIGHT) / 2;
 
 		addToggle(left, y, "heartsplus.config.enabled", HeartsPlusConfig.isEnabled(), HeartsPlusConfig::setEnabled);
 		addToggle(right, y, "heartsplus.config.show_own", HeartsPlusConfig.isShowOwnHearts(), HeartsPlusConfig::setShowOwnHearts);

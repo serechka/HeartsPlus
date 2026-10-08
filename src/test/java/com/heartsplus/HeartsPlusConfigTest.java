@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Clamping, round-trip and the one-time schema migrations (0.4.7 heights, 0.4.9 slider split) of the JSON config. */
+/** Clamping, round-trip, malformed-file fallback and the one-time schema migrations (0.4.7 heights, 0.4.9 slider split) of the JSON config. */
 class HeartsPlusConfigTest {
 	/** A 0.4.7/0.4.8 schema file: version 1 still runs the 0.4.9 slider migration. */
 	private static final String VERSION_1 = "\"configVersion\": 1";
@@ -176,6 +176,29 @@ class HeartsPlusConfigTest {
 	@Test
 	void emptyDocumentParsesToNull() {
 		assertNull(HeartsPlusConfig.parse("null"));
+	}
+
+	/**
+	 * A hand-edited file with a wrong-typed value in a double field must
+	 * degrade to the defaults, not crash the client on startup: Gson throws
+	 * raw RuntimeExceptions for these, which the IOException/JsonParseException
+	 * catch in load() never covered.
+	 */
+	@Test
+	void aWrongTypedDoubleFieldDegradesToDefaults() {
+		assertNull(HeartsPlusConfig.parse("{" + CURRENT_VERSION + ", \"scale\": \"abc\"}"));
+		assertNull(HeartsPlusConfig.parse("{" + CURRENT_VERSION + ", \"renderDistanceBlocks\": [8]}"));
+	}
+
+	/** A garbage legacy value degrades to "no key": the 0.4.6 default lands on 0 like any other version-less file. */
+	@Test
+	void wrongTypedLegacyKeysFallBackInsteadOfCrashing() {
+		String offset = parseAndSerialize("{\"heartOffset\": \"abc\"}");
+		assertTrue(offset.contains("\"offsetStanding\": 0"), offset);
+		assertTrue(offset.contains("\"wallOpacity\": 50"), offset);
+
+		String toggle = parseAndSerialize("{\"showBehindBlocks\": {}}");
+		assertTrue(toggle.contains("\"wallOpacity\": 50"), toggle);
 	}
 
 	/**
