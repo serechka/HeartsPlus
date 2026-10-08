@@ -45,6 +45,9 @@ public enum HeartPass {
 	/**
 	 * Vertex alpha of the see-through copy for a wall opacity in the 0-100
 	 * scale: N percent of the fully bright 255.
+	 * Not used by this era's renderer: 1.21.0 dims see-through hearts around
+	 * the vanilla 0x20 base (see HeartsAboveHeadRenderer), kept here so the
+	 * MC-free contract and its tests stay identical across branches.
 	 */
 	public static int seeThroughAlpha(int wallOpacity) {
 		return (int) Math.round(Math.clamp(wallOpacity, 0, 100) * 255.0 / 100.0);
