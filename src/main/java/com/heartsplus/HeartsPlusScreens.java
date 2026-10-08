@@ -15,7 +15,7 @@ public final class HeartsPlusScreens {
 	}
 
 	public static Screen create(Screen parent) {
-		if (ModList.get().isLoaded("cloth-config")) {
+		if (ModList.get().isLoaded("cloth_config")) {
 			return HeartsPlusClothConfigScreen.create(parent);
 		}
 		return new HeartsPlusConfigScreen(parent);

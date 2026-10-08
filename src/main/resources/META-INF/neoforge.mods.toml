@@ -32,7 +32,7 @@ ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.heartsplus]]
-modId = "cloth-config"
+modId = "cloth_config"
 type = "required"
 versionRange = "*"
 ordering = "NONE"
